@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+target/
+.cache/
+
+# Cairo / Scarb
+.snfoundry_cache/
+*.sierra.json
+*.casm.json
+
+# Environment / secrets — NEVER commit these
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Editor
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# strk20.json is tracked deliberately — do NOT ignore it
