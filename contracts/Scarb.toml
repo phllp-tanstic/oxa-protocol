@@ -2,6 +2,7 @@
 members = [
     "oxa_policy_registry",
     "oxa_credential_issuer",
+    "oxa_integration_tests",
 ]
 
 [workspace.package]

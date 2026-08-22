@@ -149,6 +149,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "oxa_integration_tests"
+version = "0.1.0"
+dependencies = [
+ "oxa_credential_issuer",
+ "oxa_policy_registry",
+ "privacy",
+ "snforge_std",
+]
+
+[[package]]
 name = "oxa_policy_registry"
 version = "0.1.0"
 dependencies = [

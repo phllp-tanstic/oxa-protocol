@@ -1,14 +1,13 @@
 [package]
-name = "oxa_credential_issuer"
+name = "oxa_integration_tests"
 version.workspace = true
 edition.workspace = true
-
-[lib]
 
 [dependencies]
 starknet.workspace = true
 privacy = { git = "https://github.com/starkware-libs/starknet-privacy", rev = "b59d8a141e49a9d940fb14dfe935cbecb8202814" }
 oxa_policy_registry = { path = "../oxa_policy_registry" }
+oxa_credential_issuer = { path = "../oxa_credential_issuer" }
 
 [dev-dependencies]
 snforge_std.workspace = true
@@ -16,3 +15,7 @@ snforge_std.workspace = true
 [[target.starknet-contract]]
 sierra = true
 casm = true
+build-external-contracts = [
+    "oxa_policy_registry::OxaPolicyRegistry",
+    "oxa_credential_issuer::OxaCredentialIssuer",
+]
