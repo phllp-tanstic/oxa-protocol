@@ -3,6 +3,8 @@ name = "oxa_policy_registry"
 version.workspace = true
 edition.workspace = true
 
+[lib]
+
 [dependencies]
 starknet.workspace = true
 

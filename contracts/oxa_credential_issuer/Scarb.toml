@@ -1,0 +1,16 @@
+[package]
+name = "oxa_credential_issuer"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+starknet.workspace = true
+privacy = { git = "https://github.com/starkware-libs/starknet-privacy", rev = "b59d8a141e49a9d940fb14dfe935cbecb8202814" }
+oxa_policy_registry = { path = "../oxa_policy_registry" }
+
+[dev-dependencies]
+snforge_std.workspace = true
+
+[[target.starknet-contract]]
+sierra = true
+casm = true
