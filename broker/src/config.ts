@@ -8,6 +8,11 @@ export interface BrokerConfig {
   brokerAccountAddress: string;
   brokerPrivateKey: string;
   viewingKey: string;
+  /**
+   * May be empty: the real STRK20 proving service URL has NOT been confirmed
+   * by the hackathon organizers yet. Until it is provided, any flow that needs
+   * proving must fail loudly instead of guessing or faking a URL.
+   */
   provingServiceUrl: string;
   indexerUrl: string;
   privacyPoolAddress: string;
@@ -21,12 +26,14 @@ const REQUIRED_STRING_VARS = [
   'BROKER_ACCOUNT_ADDRESS',
   'BROKER_PRIVATE_KEY',
   'VIEWING_KEY',
-  'PROVING_SERVICE_URL',
   'INDEXER_URL',
   'PRIVACY_POOL_ADDRESS',
   'POLICY_REGISTRY_ADDRESS',
   'CREDENTIAL_ISSUER_ADDRESS',
 ] as const;
+
+// Optional: deliberately NOT in REQUIRED_STRING_VARS — see BrokerConfig.provingServiceUrl.
+const OPTIONAL_STRING_VARS = ['PROVING_SERVICE_URL'] as const;
 
 /**
  * Load and validate broker configuration from the environment.
@@ -69,7 +76,8 @@ export function loadConfig(): BrokerConfig {
     brokerAccountAddress: values.BROKER_ACCOUNT_ADDRESS as string,
     brokerPrivateKey: values.BROKER_PRIVATE_KEY as string,
     viewingKey: values.VIEWING_KEY as string,
-    provingServiceUrl: values.PROVING_SERVICE_URL as string,
+    provingServiceUrl:
+      process.env[OPTIONAL_STRING_VARS[0]]?.trim() ?? '',
     indexerUrl: values.INDEXER_URL as string,
     privacyPoolAddress: values.PRIVACY_POOL_ADDRESS as string,
     policyRegistryAddress: values.POLICY_REGISTRY_ADDRESS as string,

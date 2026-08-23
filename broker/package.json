@@ -11,7 +11,8 @@
   "dependencies": {
     "@oxa/sdk": "file:../sdk",
     "dotenv": "^16.4.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "starknet": "^10.4.0"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
