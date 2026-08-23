@@ -1,0 +1,21 @@
+{
+  "name": "@oxa/sdk",
+  "version": "0.1.0",
+  "description": "OXA TypeScript SDK — scoped payment credentials for autonomous agents",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "starknet": "^10.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.9.3"
+  }
+}

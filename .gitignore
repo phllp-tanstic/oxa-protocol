@@ -32,4 +32,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Vendored third-party repos — cloned fresh per docs/decisions, not committed
+vendor/
+
 # strk20.json is tracked deliberately — do NOT ignore it
