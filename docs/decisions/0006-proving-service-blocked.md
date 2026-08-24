@@ -50,3 +50,32 @@ verified. Once a working `PROVING_SERVICE_URL` is available, wiring it in
 is expected to be small — the SDK's `createPrivateTransfers` builder
 pattern is already the target integration point (Decision 0001), nothing
 upstream of it needs to change.
+
+---
+
+## Addendum (2026-08-24): redeem() independently verified live
+
+`sdk/src/endpointClient.ts`'s `StarknetEndpointClient` was wired against
+the real, deployed `OxaCredentialIssuer` ABI and tested with a genuine
+signed invoke transaction against live Sepolia. Called `redeem()` with a
+deliberately nonexistent credential secret; the transaction reverted
+inside the live contract itself with `CREDENTIAL_NOT_FOUND` — the
+correct, expected result, since nothing has been minted yet.
+
+This is meaningful, not a null result: the entrypoint selector was
+computed by `starknet.js` from the real Sierra ABI (not hand-written),
+the call executed against the correct declared class hash and deployed
+address, and the revert reason came from our own contract's own
+assertion — confirming ABI wiring, address wiring, and the signing flow
+are all correct end-to-end. The only remaining gap for a full success
+case is a real minted credential to redeem, which depends on the still-
+blocked proving service above.
+
+Attempted to resolve the proving-service blocker directly: checked the
+vendored repo's own CI configs (`demo-deploy.yml` pulls
+`BACKEND_PROVER_URL`/`BACKEND_INDEXER_URL` from GitHub Actions secrets —
+confirmed deliberately private, not published anywhere in the public
+repo), and queried Starknet's official 24/7 assistant
+(`agent.starknet.io`), which had no STRK20-specific information indexed.
+Escalated to the hackathon's Telegram and the Starknet Discord directly;
+awaiting a response from a human.
