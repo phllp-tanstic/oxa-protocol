@@ -1,22 +1,40 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { Account, Contract, RpcProvider } from 'starknet';
 import type { OxaEndpointClient, RedeemParams, RedeemResult } from './types';
 
-// TODO: replace this placeholder ABI with the real ABI import path once the
-// contracts are deployed to testnet and we have a real artifact to import, e.g.:
-//   import oxaIssuerAbi = require('../abis/oxa_credential_issuer.json');
-const PLACEHOLDER_ISSUER_ABI = [
-  {
-    name: 'redeem',
-    type: 'function',
-    inputs: [
-      { name: 'credential_secret', type: 'felt252' },
-      { name: 'endpoint_id', type: 'felt252' },
-      { name: 'payout_address', type: 'ContractAddress' },
-    ],
-    outputs: [],
-    state_mutability: 'external',
-  },
-];
+/**
+ * Real ABI, copied from contracts/target/dev/
+ * oxa_credential_issuer_OxaCredentialIssuer.contract_class.json (full Sierra
+ * class JSON; its `abi` array is extracted below). Loaded via fs rather than a
+ * JSON import to keep the Sierra program out of tsc's inference — same pattern
+ * as broker/src/policyCheck.ts.
+ *
+ * Two candidate paths because __dirname differs between ts-node runs (sdk/src)
+ * and compiled output (sdk/dist): tsc does not copy .json files to outDir, so
+ * after a build we fall back to the source-tree copy.
+ */
+function loadIssuerAbi(): unknown[] {
+  const candidates = [
+    join(__dirname, 'abi', 'OxaCredentialIssuer.json'),
+    join(__dirname, '..', 'src', 'abi', 'OxaCredentialIssuer.json'),
+  ];
+  let lastError: unknown;
+  for (const path of candidates) {
+    try {
+      const parsed = JSON.parse(readFileSync(path, 'utf8')) as { abi?: unknown[] };
+      return Array.isArray(parsed) ? parsed : (parsed.abi as unknown[]);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw new Error(
+    `Could not load OxaCredentialIssuer ABI (looked in ${candidates.join(', ')}): ${String(lastError)}`,
+  );
+}
+
+const ISSUER_ABI: unknown[] = loadIssuerAbi();
 
 export interface StarknetEndpointClientOptions {
   rpcUrl: string;
@@ -44,22 +62,39 @@ export class StarknetEndpointClient implements OxaEndpointClient {
       signer: this.options.privateKey,
     });
     const contract = new Contract({
-      abi: PLACEHOLDER_ISSUER_ABI,
+      abi: ISSUER_ABI,
       address: this.options.issuerContract,
       providerOrAccount: account,
     });
 
+    // Real signed invoke (not a read call): redeem marks the credential used
+    // on-chain and transfers tokens to the payout address.
     const result = await contract.redeem(
       params.credentialSecret,
       params.endpointId,
       params.payoutAddress,
     );
 
-    return {
-      txHash: result.transaction_hash,
-      // TODO: parse the actual redeemed amount from the transaction receipt /
-      // return data once the real ABI is wired in.
-      amount: BigInt(result.amount ?? 0),
-    };
+    const txHash: string = result.transaction_hash;
+
+    // Best-effort: pull the redeemed amount off the CredentialRedeemed event in
+    // the receipt. Event has no keys; data layout is [commitment_hash, token,
+    // amount(u128), payout_address, timestamp].
+    let amount = BigInt(0);
+    try {
+      const receipt = (await provider.waitForTransaction(txHash)) as {
+        events?: Array<{ data?: string[] }>;
+      };
+      for (const ev of receipt.events ?? []) {
+        if ((ev.data?.length ?? 0) >= 5 && ev.data !== undefined) {
+          amount = BigInt(ev.data[2]);
+          break;
+        }
+      }
+    } catch {
+      // Receipt not confirmable yet — tx hash is authoritative; amount stays 0n.
+    }
+
+    return { txHash, amount };
   }
 }
