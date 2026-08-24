@@ -18,10 +18,13 @@ import { loadConfig } from './config';
 import { feltFromParam } from './commitmentHash';
 
 /**
- * Pinned Sepolia RPC endpoint for all broker policy reads.
- * (Same endpoint the discovery/indexer service is pointed at.)
+ * Broker policy reads go through the single RPC endpoint configured for the
+ * whole broker (RPC_URL in broker/.env — the operator-confirmed Sepolia
+ * endpoint). The task originally pinned
+ * https://free-rpc.nethermind.io/sepolia-juno/v0_7 here, but Nethermind
+ * retired that host (NXDOMAIN confirmed via Google AND Cloudflare DoH), so the
+ * .env value is now the source of truth.
  */
-const SEPOLIA_RPC_URL = 'https://free-rpc.nethermind.io/sepolia-juno/v0_7';
 
 /**
  * ABI copied from contracts/target/dev/oxa_policy_registry_OxaPolicyRegistry.contract_class.json
@@ -52,7 +55,7 @@ let cachedRegistry: Contract | null = null;
 function getPolicyRegistry(): Contract {
   if (cachedRegistry === null) {
     const config = loadConfig();
-    const provider = new RpcProvider({ nodeUrl: SEPOLIA_RPC_URL });
+    const provider = new RpcProvider({ nodeUrl: config.rpcUrl });
     cachedRegistry = new Contract({
       abi: POLICY_REGISTRY_ABI,
       address: config.policyRegistryAddress,

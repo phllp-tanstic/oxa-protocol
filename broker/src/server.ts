@@ -71,9 +71,11 @@ app.post('/request-credential', async (req, res) => {
   }
   const params = validated.params;
 
-  // Policies are stored per (owner, category) in OxaPolicyRegistry, set by the
-  // owner account itself; this broker issues against its own account's policy.
-  const owner = config.brokerAccountAddress;
+  // Policies are stored per (owner, category) in OxaPolicyRegistry and were
+  // set on-chain under the separate Owner account (Decision 0001: Broker and
+  // Owner are distinct identities). Policy lookups therefore use OWNER_ADDRESS
+  // from .env — never the Broker's signing account.
+  const owner = config.ownerAddress;
 
   // 2. Real off-chain policy pre-check — plain read-only RPC calls to the
   //    deployed OxaPolicyRegistry on Sepolia. No signing, no gas, no proving.
