@@ -79,3 +79,49 @@ repo), and queried Starknet's official 24/7 assistant
 (`agent.starknet.io`), which had no STRK20-specific information indexed.
 Escalated to the hackathon's Telegram and the Starknet Discord directly;
 awaiting a response from a human.
+
+---
+
+## Addendum (2026-08-26): self-hosted prover working
+
+Resolved the proving-service blocker via self-hosting, not via organizer
+response (issue and Discord/Telegram messages remain unanswered as of
+this writing). Built `starkware-libs/sequencer`'s
+`crates/starknet_transaction_prover` locally via Docker — the official,
+StarkWare-authored self-hosting path, confirmed genuine via API-spec
+match against our vendored SDK's own committed fixture (see original
+entry above). Build took ~85 minutes once dependency discovery was
+complete (sparse-checkout of the full 115-crate workspace, required
+because cargo needs the whole dependency graph's manifests even for a
+single-crate build).
+
+Two real, non-obvious bugs found and fixed while integrating it:
+
+1. **`PRIVATE_KEY_NOT_CANONICAL`** — the pool enforces
+   `key < HALF_ORDER` (half the STARK curve order) on registered viewing
+   keys, a standard malleability-prevention constraint
+   (`packages/privacy/src/utils.cairo::is_canonical_key`). Our originally
+   generated viewing key was a uniformly random scalar with no such
+   bound — roughly a coin flip whether it would land in the accepted
+   range. Fixed by generating scalars in a loop, discarding any at or
+   above `HALF_ORDER`, using `starknet.js`'s own `ec.starkCurve.CURVE.n`
+   constant rather than a hardcoded value.
+2. **Request timeout too short for local hardware** — the SDK's default
+   proving-request timeout (30s) is calibrated to StarkWare's stated
+   "~4s proving time" claim, which is almost certainly measured against
+   their documented production sizing (48 vCPU / 96 GB), not commodity
+   hardware. Confirmed via prover logs that proving was genuinely
+   in-progress, not stuck, well past 30s. Fixed via the SDK's own
+   `provingProvider.requestTimeoutMs` config option, raised to 5 minutes.
+
+## What this changes
+
+- The proving blocker is no longer external/unowned. Remaining risk is
+  operational (keeping the prover container running reliably) and
+  performance (proving time on modest hardware), not a missing unknown.
+- For any demo requiring live availability during judging (not just
+  recorded transactions), the prover needs to move from a local machine
+  to a persistent host — tracked as a Phase 4 task, not yet done.
+- Discovery service remains unresolved but is looking decreasingly
+  necessary for Mint specifically — registration reached real proving
+  and pool evaluation with no indexer configured at all.
