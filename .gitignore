@@ -36,3 +36,4 @@ yarn-error.log*
 vendor/
 
 # strk20.json is tracked deliberately — do NOT ignore it
+docs/HANDOVER.md
