@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "start": "node dist/server.js",
-    "dev": "node --loader ts-node/esm src/server.ts"
+    "dev": "node --loader ts-node/esm src/server.ts",
+    "mcp": "node scripts/mcp-server.mjs"
   },
   "dependencies": {
     "@oxa/sdk": "file:../sdk",

@@ -8,7 +8,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"require('node:fs').cpSync('src/abi','dist/abi',{recursive:true})\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
