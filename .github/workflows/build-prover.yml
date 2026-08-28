@@ -8,11 +8,24 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Clone sequencer (shallow, full — CI has fast bandwidth to GitHub)
+      - name: Clone sequencer at pinned Starknet-0.14.3-era commit
         run: |
-          git clone --depth 1 https://github.com/starkware-libs/sequencer.git /tmp/sequencer
+          # Pinned, NOT main: the prover bakes the Virtual OS binary at build
+          # time, and its program hash must match what the deployed chain
+          # allows. Evidence (blockifier versioned_constants JSONs in this repo
+          # at the pinned commit): Starknet 0.14.3 allows ONLY
+          #   0x53f6c9fcfd31d27279ff7d7e422b44623550a732b59fe193354a7316a96daa1
+          # while 0x14.4+ additionally allow
+          #   0x1c7be3225dfb33359b3ba9ffbe1542b7da27879b6d89f47b967e512463fd324
+          # Sepolia activated 0.14.3 at block 11065301 (2026-06-22T10:12:43Z);
+          # 570ca41d is the last sequencer main commit before that activation.
+          # If the chain upgrades to 0.14.4+, re-evaluate the pin.
+          git init /tmp/sequencer
           cd /tmp/sequencer
-          echo "Resolved commit: $(git rev-parse HEAD)"
+          git remote add origin https://github.com/starkware-libs/sequencer.git
+          git fetch --depth 1 origin 570ca41d1b8e0e207d507b2a422bfef3eee70edd
+          git checkout FETCH_HEAD
+          echo "Pinned sequencer commit: $(git rev-parse HEAD)"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
