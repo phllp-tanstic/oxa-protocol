@@ -21,6 +21,9 @@ target/
 *.pem
 *.key
 
+# Broker custodial credential store — holds real secrets, NEVER commit
+broker/.data/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json

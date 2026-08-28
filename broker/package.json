@@ -2,11 +2,13 @@
   "name": "@oxa/broker",
   "version": "0.1.0",
   "description": "OXA Broker service — issues scoped payment credentials backed by the Privacy pool",
+  "type": "module",
   "main": "./dist/server.js",
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
-    "start": "ts-node src/server.ts"
+    "start": "node dist/server.js",
+    "dev": "node --loader ts-node/esm src/server.ts"
   },
   "dependencies": {
     "@oxa/sdk": "file:../sdk",

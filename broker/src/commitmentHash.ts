@@ -41,3 +41,19 @@ export function computeCredentialCommitment(secret: string, endpointId: string):
     feltFromParam(endpointId),
   ]);
 }
+
+/** Must match OXA_RECLAIM_TAG in contracts/oxa_credential_issuer/src/lib.cairo. */
+export const OXA_RECLAIM_TAG = 'OXA_RECLAIM_TAG:V1';
+
+/**
+ * computeReclaimCommitment — byte-for-byte equivalent of Cairo's
+ * poseidon_hash_span([OXA_RECLAIM_TAG, reclaim_secret]) (lib.cairo
+ * compute_reclaim_commitment). The reclaim secret stays with the broker
+ * (Decision 0001 custodial scope) so expired credentials can be reclaimed.
+ */
+export function computeReclaimCommitment(reclaimSecret: string): string {
+  return hash.computePoseidonHashOnElements([
+    shortString.encodeShortString(OXA_RECLAIM_TAG),
+    feltFromParam(reclaimSecret),
+  ]);
+}

@@ -1,11 +1,9 @@
-import { randomBytes } from 'node:crypto';
-
 import express from 'express';
 import type { RequestCredentialParams } from '@oxa/sdk';
 
-import { loadConfig } from './config';
-import { checkPolicy } from './policyCheck';
-import { computeCredentialCommitment } from './commitmentHash';
+import { loadConfig } from './config.js';
+import { checkPolicy } from './policyCheck.js';
+import { mintCredential } from './mint.js';
 
 const config = loadConfig();
 
@@ -86,6 +84,7 @@ app.post('/request-credential', async (req, res) => {
       category: params.category,
       endpointId: params.endpointId,
       amount: params.amount,
+      modeOverride: params.modeOverride,
     });
   } catch (err) {
     res.status(502).json({
@@ -101,21 +100,43 @@ app.post('/request-credential', async (req, res) => {
     return;
   }
 
-  // 3. Fresh random secret for the credential commitment (crypto.randomBytes,
-  //    NOT Math.random). The secret is returned to no one but the requester
-  //    once minting exists; only the hash is echoed here.
-  const secret = `0x${randomBytes(16).toString('hex')}`;
-  const commitmentHash = computeCredentialCommitment(secret, params.endpointId);
+  const policy = policyResult.policy;
+  const mode = policyResult.resolvedMode;
+  if (policy === undefined || mode === undefined) {
+    res.status(502).json({ error: 'policy check passed without full policy/mode — broker bug' });
+    return;
+  }
 
-  // 4. Mint is deliberately NOT implemented: the real STRK20 proving service
-  //    URL has not been confirmed by the hackathon organizers yet, so there is
-  //    nothing real to call. We do NOT fake a proving URL or a fake successful
-  //    Mint response. Policy check + commitment are fully real and functional.
-  res.status(501).json({
-    error: 'policy check passed; mint blocked pending PROVING_SERVICE_URL from hackathon organizers',
-    commitmentHash,
-    policyCheckPassed: true,
-  });
+  // Public-mode issuance (direct withdraw to the endpoint, Blueprint §2.9) is
+  // not wired yet — only the private/anonymizer route mints through the issuer.
+  if (mode !== 'private') {
+    res.status(501).json({
+      error: `public-mode issuance not implemented yet (category resolves to '${mode}')`,
+      policyCheckPassed: true,
+    });
+    return;
+  }
+
+  // 3+4. Real Mint via the STRK20 privacy pool: the SDK computes the STARK
+  // proof, this service broadcasts the proof-carrying transaction, and only an
+  // on-chain SUCCEEDED receipt produces a credential claim payload. No mock
+  // (or partial) paths exist.
+  try {
+    const credential = await mintCredential({
+      category: params.category,
+      endpointId: params.endpointId,
+      amount: params.amount,
+      maxTtlSeconds: policy.maxTtlSeconds,
+      ownerAddress: owner,
+    });
+    res.status(200).json(credential);
+  } catch (err) {
+    console.error('mint failed:', err);
+    res.status(502).json({
+      error: `mint failed: ${err instanceof Error ? err.message : String(err)}`,
+      policyCheckPassed: true,
+    });
+  }
 });
 
 app.post('/reclaim-expired', (_req, res) => {

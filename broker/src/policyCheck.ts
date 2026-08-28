@@ -14,8 +14,8 @@ import { join } from 'node:path';
 
 import { Contract, RpcProvider } from 'starknet';
 
-import { loadConfig } from './config';
-import { feltFromParam } from './commitmentHash';
+import { loadConfig } from './config.js';
+import { feltFromParam } from './commitmentHash.js';
 
 /**
  * Broker policy reads go through the single RPC endpoint configured for the
@@ -30,24 +30,62 @@ import { feltFromParam } from './commitmentHash';
  * ABI copied from contracts/target/dev/oxa_policy_registry_OxaPolicyRegistry.contract_class.json
  * (the full Sierra class JSON; we extract its `abi` array below). Loaded via fs
  * rather than a JSON import to keep the Sierra program out of tsc's inference.
+ *
+ * Two candidate paths because import.meta.dirname differs between ts-node runs
+ * (broker/src) and compiled output (broker/dist): tsc does not copy .json files
+ * to outDir, so after a build we fall back to the source-tree copy — the same
+ * pattern as sdk/src/endpointClient.ts.
  */
-const CONTRACT_CLASS = JSON.parse(
-  readFileSync(join(__dirname, 'abi', 'OxaPolicyRegistry.json'), 'utf8'),
-) as { abi?: unknown[] };
-const POLICY_REGISTRY_ABI: unknown[] = Array.isArray(CONTRACT_CLASS)
-  ? CONTRACT_CLASS
-  : (CONTRACT_CLASS.abi as unknown[]);
+function loadPolicyRegistryAbi(): unknown[] {
+  const candidates = [
+    join(import.meta.dirname, 'abi', 'OxaPolicyRegistry.json'),
+    join(import.meta.dirname, '..', 'src', 'abi', 'OxaPolicyRegistry.json'),
+  ];
+  let lastError: unknown;
+  for (const path of candidates) {
+    try {
+      const parsed = JSON.parse(readFileSync(path, 'utf8')) as { abi?: unknown[] };
+      return Array.isArray(parsed) ? parsed : (parsed.abi as unknown[]);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw new Error(
+    `Could not load OxaPolicyRegistry ABI (looked in ${candidates.join(', ')}): ${String(lastError)}`,
+  );
+}
+
+const POLICY_REGISTRY_ABI: unknown[] = loadPolicyRegistryAbi();
 
 export interface PolicyCheckParams {
   owner: string;
   category: string;
   endpointId: string;
   amount: bigint;
+  /** Optional per-request mode override; validated against the category's mode lock. */
+  modeOverride?: 'private' | 'public';
+}
+
+export interface CategoryPolicyValues {
+  perRequestCap: bigint;
+  periodCap: bigint;
+  periodSeconds: bigint;
+  maxTtlSeconds: bigint;
+  modeLocked: boolean;
+  lockedMode: boolean;
 }
 
 export interface PolicyCheckResult {
   allowed: boolean;
   reason?: string;
+  /** Full on-chain policy, present when the category policy exists. */
+  policy?: CategoryPolicyValues;
+  /**
+   * Mode resolved per Blueprint §2.7/§2.9: mode-locked categories pin the
+   * mode to the owner's locked_mode; flexible categories may be overridden
+   * (private is always allowed — it is strictly more conservative).
+   */
+  resolvedMode?: 'private' | 'public';
 }
 
 let cachedRegistry: Contract | null = null;
@@ -131,5 +169,46 @@ export async function checkPolicy(params: PolicyCheckParams): Promise<PolicyChec
     };
   }
 
-  return { allowed: true };
+  const policy: CategoryPolicyValues = {
+    perRequestCap,
+    periodCap: toBigInt(structField(policyRaw, 'period_cap', 1) ?? 0),
+    periodSeconds: toBigInt(structField(policyRaw, 'period_seconds', 2) ?? 0),
+    maxTtlSeconds: toBigInt(structField(policyRaw, 'max_ttl_seconds', 3) ?? 0),
+    modeLocked: toBigInt(structField(policyRaw, 'mode_locked', 4) ?? 0) === BigInt(1),
+    lockedMode: toBigInt(structField(policyRaw, 'locked_mode', 5) ?? 0) === BigInt(1),
+  };
+
+  if (policy.maxTtlSeconds === BigInt(0)) {
+    return {
+      allowed: false,
+      reason:
+        `category '${params.category}' has max_ttl_seconds 0 — no credential ` +
+        `expiry window configured for owner ${owner}`,
+      policy,
+    };
+  }
+
+  // Mode resolution per Blueprint §2.7/§2.9: a mode-locked category pins the
+  // settlement mode to locked_mode (owner's floor); a flexible category
+  // defaults to private and may be overridden — upgrading to public is only
+  // possible when the owner left the category flexible, downgrading to
+  // private is always allowed (strictly more conservative, never a leak).
+  let resolvedMode: 'private' | 'public';
+  if (policy.modeLocked) {
+    resolvedMode = policy.lockedMode ? 'public' : 'private';
+    if (params.modeOverride !== undefined && params.modeOverride !== resolvedMode) {
+      return {
+        allowed: false,
+        reason:
+          `category '${params.category}' is mode-locked to ${resolvedMode}; ` +
+          `override to '${params.modeOverride}' rejected`,
+        policy,
+        resolvedMode,
+      };
+    }
+  } else {
+    resolvedMode = params.modeOverride ?? 'private';
+  }
+
+  return { allowed: true, policy, resolvedMode };
 }
