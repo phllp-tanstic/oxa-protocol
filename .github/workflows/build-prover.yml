@@ -18,12 +18,16 @@ jobs:
           # while 0x14.4+ additionally allow
           #   0x1c7be3225dfb33359b3ba9ffbe1542b7da27879b6d89f47b967e512463fd324
           # Sepolia activated 0.14.3 at block 11065301 (2026-06-22T10:12:43Z);
-          # 570ca41d is the last sequencer main commit before that activation.
+          # Verified via direct source inspection of tag APOLLO-0.14.3-RC.17:
+          # program_hash.json, constants.cairo, and blockifier_versioned_constants_0_14_3.json
+          # all confirm virtual_os hash 0x53f6c9fc... for this tag. The prior pin to
+          # 570ca41d (a main-branch commit) was WRONG and produced 0x1c7be322... instead,
+          # which is rejected on-chain. Use the tag, not a guessed main commit.
           # If the chain upgrades to 0.14.4+, re-evaluate the pin.
           git init /tmp/sequencer
           cd /tmp/sequencer
           git remote add origin https://github.com/starkware-libs/sequencer.git
-          git fetch --depth 1 origin 570ca41d1b8e0e207d507b2a422bfef3eee70edd
+          git fetch --depth 1 origin APOLLO-0.14.3-RC.17
           git checkout FETCH_HEAD
           echo "Pinned sequencer commit: $(git rev-parse HEAD)"
 
