@@ -40,3 +40,5 @@ vendor/
 
 # strk20.json is tracked deliberately — do NOT ignore it
 docs/HANDOVER.md
+docs/HANDOVER-LIVE.md
+HANDOVER-v2.md
