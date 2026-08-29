@@ -8,8 +8,9 @@
  * provides the broadcast + waitForTransaction tail shared by every pool write
  * the Broker initiates.
  */
-import { constants, Account, RpcProvider } from 'starknet';
+import { constants, Account, RpcProvider, Contract } from 'starknet';
 import type { PrivateTransfersInterface } from '@starkware-libs/starknet-privacy-sdk';
+import { ContractDiscoveryProvider, IndexerDiscoveryProvider } from '@starkware-libs/starknet-privacy-sdk/testing';
 
 import { loadConfig } from './config.js';
 
@@ -45,6 +46,16 @@ export async function createPoolClient(): Promise<PoolClient> {
     signer: config.brokerPrivateKey,
     cairoVersion: '1',
   });
+  const discoveryProvider = config.indexerUrl
+    ? new IndexerDiscoveryProvider(config.indexerUrl, config.privacyPoolAddress)
+    : new ContractDiscoveryProvider(
+        new Contract({
+          abi: (await provider.getClassAt(config.privacyPoolAddress)).abi,
+          address: config.privacyPoolAddress,
+          providerOrAccount: provider,
+        }) as unknown as ConstructorParameters<typeof ContractDiscoveryProvider>[0],
+      );
+
   const transfers = createPrivateTransfers({
     account,
     viewingKeyProvider: {
@@ -55,9 +66,7 @@ export async function createPoolClient(): Promise<PoolClient> {
       chainId: constants.StarknetChainId.SN_SEPOLIA,
       requestTimeoutMs: 300000,
     },
-    discoveryProvider: {
-      url: config.indexerUrl || '',
-    },
+    discoveryProvider,
     poolContractAddress: config.privacyPoolAddress,
   });
   return { transfers, provider, account };

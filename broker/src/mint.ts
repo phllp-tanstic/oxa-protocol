@@ -58,7 +58,7 @@ export async function mintCredential(params: MintParams): Promise<Credential> {
   const builder = client.transfers.build({
     autoRegister: false,
     autoSetup: true,
-    autoDiscover: config.indexerUrl !== '' ? { notes: 'all', channels: 'missing' } : undefined,
+    autoDiscover: { notes: 'all', channels: 'missing' },
     autoSelectNotes: 'naive',
     provingBlockId: await client.provider.getBlockNumber() - 10,
   });
@@ -69,6 +69,8 @@ export async function mintCredential(params: MintParams): Promise<Credential> {
       amount: params.amount,
     });
   });
+
+  builder.surplusTo(config.brokerAccountAddress, false);
 
   builder.invoke(() => ({
     contractAddress: config.credentialIssuerAddress,
