@@ -120,6 +120,15 @@ async function handleToolsCall(name, args) {
       });
       return { text: await relayRes.text(), isError: !relayRes.ok };
     }
+    case 'oxa_reclaim_expired': {
+      const res = await fetch(`${BROKER_BASE_URL}/reclaim-expired`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commitmentHash: args.commitmentHash }),
+      });
+      const body = await res.text();
+      return { text: body, isError: !res.ok };
+    }
     default:
       return { text: `unknown tool: ${name}`, isError: true };
   }
@@ -198,6 +207,21 @@ async function main() {
                     },
                   },
                   required: ['claimPayload'],
+                },
+              },
+              {
+                name: 'oxa_reclaim_expired',
+                description:
+                  'Reclaim an expired, unused OXA credential: returns the credential\'s locked amount to the Broker\'s shielded balance via the Broker\'s /reclaim-expired route. Only succeeds for credentials whose TTL has genuinely expired on-chain - an early attempt reverts NOT_YET_EXPIRED.',
+                inputSchema: {
+                  type: 'object',
+                  properties: {
+                    commitmentHash: {
+                      type: 'string',
+                      description: 'Commitment hash of the expired, unused credential to reclaim',
+                    },
+                  },
+                  required: ['commitmentHash'],
                 },
               },
             ],
