@@ -42,3 +42,8 @@ vendor/
 docs/HANDOVER.md
 docs/HANDOVER-LIVE.md
 HANDOVER-v2.md
+
+# Process/debug artifacts from local dev sessions
+*.pid
+*.err
+broker/step3_*.json
