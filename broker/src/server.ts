@@ -130,7 +130,12 @@ app.post('/request-credential', async (req, res) => {
       maxTtlSeconds: policy.maxTtlSeconds,
       ownerAddress: owner,
     });
-    res.status(200).json(credential);
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200).send(
+      JSON.stringify(credential, (_key, value) =>
+        typeof value === 'bigint' ? value.toString() : value,
+      ),
+    );
   } catch (err) {
     console.error('mint failed:', err);
     res.status(502).json({
