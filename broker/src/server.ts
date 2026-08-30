@@ -4,6 +4,7 @@ import type { RequestCredentialParams } from '@oxa/sdk';
 import { loadConfig } from './config.js';
 import { checkPolicy } from './policyCheck.js';
 import { mintCredential } from './mint.js';
+import { reclaimExpiredCredential } from './reclaim.js';
 
 const config = loadConfig();
 
@@ -139,8 +140,30 @@ app.post('/request-credential', async (req, res) => {
   }
 });
 
-app.post('/reclaim-expired', (_req, res) => {
-  res.status(501).json({ error: 'not implemented yet' });
+app.post('/reclaim-expired', (req, res) => {
+  const commitmentHash = req.body?.commitmentHash;
+  if (typeof commitmentHash !== 'string' || commitmentHash.length === 0) {
+    res.status(400).json({ error: 'commitmentHash (string) is required' });
+    return;
+  }
+
+  try {
+    reclaimExpiredCredential(commitmentHash)
+      .then((result) => {
+        res.status(200).json(result);
+      })
+      .catch((err: unknown) => {
+        console.error('reclaim failed:', err);
+        res.status(502).json({
+          error: `reclaim failed: ${err instanceof Error ? err.message : String(err)}`,
+        });
+      });
+  } catch (err) {
+    console.error('reclaim failed:', err);
+    res.status(502).json({
+      error: `reclaim failed: ${err instanceof Error ? err.message : String(err)}`,
+    });
+  }
 });
 
 app.listen(config.port, () => {

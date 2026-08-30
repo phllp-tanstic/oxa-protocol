@@ -83,6 +83,8 @@ pub trait IOxaCredentialIssuer<T> {
 #[starknet::interface]
 pub trait IERC20<T> {
     fn transfer(ref self: T, recipient: starknet::ContractAddress, amount: u256) -> bool;
+
+    fn approve(ref self: T, spender: starknet::ContractAddress, amount: u256) -> bool;
 }
 
 #[starknet::contract]
@@ -198,6 +200,14 @@ pub mod OxaCredentialIssuer {
                     let mut updated = entry;
                     updated.used = true;
                     self.credentials.entry(commitment_hash).write(updated);
+
+                    // Approve the privacy pool to pull the reclaimed funds when it
+                    // settles the returned OpenNoteDeposit (the pool transfers
+                    // entry.amount of entry.token out of this contract). Mirrors the
+                    // protocol reference pattern in mock_swap_executor.cairo:
+                    //   out_erc20.approve(spender: privacy_addr, amount: out_amount.into());
+                    let erc20 = IERC20Dispatcher { contract_address: entry.token };
+                    erc20.approve(spender: self.privacy_contract.read(), amount: entry.amount.into());
 
                     array![
                         OpenNoteDeposit { note_id, token: entry.token, amount: entry.amount },
