@@ -47,3 +47,4 @@ HANDOVER-v2.md
 *.pid
 *.err
 broker/step3_*.json
+broker/.test_*.json
