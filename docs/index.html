@@ -14,12 +14,16 @@
 <body>
   <h1>OXA — Scoped Payment Credentials for Autonomous Agents</h1>
 
-  <p>
-    OXA is a scoped, single-use payment credential protocol for autonomous agents, funded from a shielded STRK20 balance and settled directly against crypto-native endpoints. An OXA credential is a one-time claim right: a fixed amount of a specific ERC-20, locked behind a cryptographic commitment, redeemable exactly once, by exactly one endpoint, within a fixed time window. Owners shield funds once into the STRK20 pool, then issue scoped, single-use credentials on demand — choosing per action whether settlement is private or public.
+    <p>
+    An OXA credential is a one-time claim right: a fixed amount of a specific ERC-20, locked behind a cryptographic commitment, redeemable exactly once, by exactly one endpoint, within a fixed time window. Owners shield funds once into the STRK20 pool, then issue scoped, single-use payment credentials on demand — one per purchase — choosing, per action, whether that purchase settles privately or publicly.
   </p>
 
   <p>
-    As an example, an inference relay has been built to demonstrate the mechanism: a credential authorizes a single weather query, verified on-chain via the real STRK20 pool before the relay proxies the request to Open-Meteo.
+    Built specifically for the STRK20 ecosystem on Starknet: the shielded pool, mandatory deposit screening, viewing-key registration, private transfers, and a self-hosted prover are all real and fully exercised on Sepolia. The complete credential lifecycle — register, shield, mint, redeem, reclaim — is verified end-to-end against the live STRK20 privacy pool.
+  </p>
+
+  <p>
+    As a concrete example, an inference relay endpoint has been built to demonstrate the mechanism: a credential authorizes a single weather query, which is verified on-chain via the real STRK20 pool before the relay proxies the request to Open-Meteo.
   </p>
 
   <ul>
