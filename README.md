@@ -12,10 +12,6 @@ An OXA credential is a one-time claim right: a fixed amount of a specific ERC-20
 
 Full architecture: see `docs/`.
 
-## Status
-
-This repository is being built in public per the hackathon rules. See `strk20.json` at the repo root for live transaction hashes, contract addresses, and demo links as they land — nothing in that file is populated yet.
-
 ## License
 
 MIT (see `LICENSE`).

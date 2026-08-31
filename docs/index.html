@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OXA — Scoped Payment Credentials for Autonomous Agents</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; color: #1f2328; line-height: 1.6; }
+    a { color: #0969da; }
+    h1 { font-size: 1.5rem; }
+    .muted { color: #656d76; }
+  </style>
+</head>
+<body>
+  <h1>OXA — Scoped Payment Credentials for Autonomous Agents</h1>
+
+  <p>
+    OXA is a scoped, single-use payment credential protocol for autonomous agents, funded from a shielded STRK20 balance and settled directly against crypto-native endpoints. An OXA credential is a one-time claim right: a fixed amount of a specific ERC-20, locked behind a cryptographic commitment, redeemable exactly once, by exactly one endpoint, within a fixed time window. Owners shield funds once into the STRK20 pool, then issue scoped, single-use credentials on demand — choosing per action whether settlement is private or public.
+  </p>
+
+  <p>
+    As an example, an inference relay has been built to demonstrate the mechanism: a credential authorizes a single weather query, verified on-chain via the real STRK20 pool before the relay proxies the request to Open-Meteo.
+  </p>
+
+  <ul>
+    <li><a href="https://github.com/phllp-tanstic/oxa-protocol">GitHub repository</a></li>
+    <li><a href="https://raw.githubusercontent.com/phllp-tanstic/oxa-protocol/main/strk20.json">strk20.json — verified transactions</a></li>
+  </ul>
+
+  <p class="muted">Phase 3: live MCP endpoint URL will be linked here once hosted.</p>
+</body>
+</html>
