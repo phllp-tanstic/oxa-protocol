@@ -34,43 +34,41 @@ if (Number.isNaN(PORT) || PORT <= 0 || PORT > 65535) {
 const app = express();
 app.use(express.json());
 
-// The exact interface OxaCredentialIssuer declares for get_credential
-// (contracts/oxa_credential_issuer/src/lib.cairo:56-81) + the CredentialRedeemed
-// event shape (lib.cairo:242-249).
-const ISSUER_ABI = [
-  {
-    type: 'function',
-    name: 'get_credential',
-    inputs: [{ name: 'commitment_hash', type: 'felt' }],
-    outputs: [
-      {
-        type: 'struct',
-        name: 'oxa_credential_issuer::oxa_credential_issuer::OxaCredentialIssuer::CredentialEntry',
-        members: [
-          { name: 'token', type: 'felt' },
-          { name: 'amount', type: 'felt' },
-          { name: 'endpoint_id', type: 'felt' },
-          { name: 'expiry_timestamp', type: 'felt' },
-          { name: 'reclaim_commitment', type: 'felt' },
-          { name: 'used', type: 'felt' },
-        ],
-      },
-    ],
-    state_mutability: 'view',
-  },
-  {
-    type: 'event',
-    name: 'CredentialRedeemed',
-    kind: 'struct',
-    members: [
-      { name: 'commitment_hash', kind: 'key', type: 'felt' },
-      { name: 'token', type: 'felt' },
-      { name: 'amount', type: 'felt' },
-      { name: 'payout_address', type: 'felt' },
-      { name: 'timestamp', type: 'felt' },
-    ],
-  },
-];
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const scriptsDir = dirname(fileURLToPath(import.meta.url));
+
+/**
+ * Real ABI — loaded from sdk/src/abi/OxaCredentialIssuer.json (full Sierra
+ * class; its `abi` array is extracted). The relay used to declare a
+ * hand-written get_credential output struct instead, but starknet.js decodes
+ * a hand-written output struct into only its FIRST member (observed:
+ * {"<struct name>": "<token>"}), so `used` was always undefined → false and
+ * every genuinely-redeemed credential was answered 402. Loading the real ABI
+ * fixes the decode (verified: get_credential then returns used as a boolean).
+ */
+function loadIssuerAbi() {
+  const candidates = [
+    join(scriptsDir, '..', '..', 'sdk', 'src', 'abi', 'OxaCredentialIssuer.json'),
+    join(scriptsDir, '..', '..', 'sdk', 'dist', 'abi', 'OxaCredentialIssuer.json'),
+  ];
+  let lastError;
+  for (const path of candidates) {
+    try {
+      const parsed = JSON.parse(readFileSync(path, 'utf8'));
+      return Array.isArray(parsed) ? parsed : parsed.abi;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw new Error(
+    `Could not load OxaCredentialIssuer ABI (looked in ${candidates.join(', ')}): ${String(lastError)}`,
+  );
+}
+
+const ISSUER_ABI = loadIssuerAbi();
 
 const provider = new RpcProvider({ nodeUrl: config.rpcUrl });
 const issuer = new Contract({
@@ -93,22 +91,47 @@ async function getUsedStatus(commitmentHash) {
   }
 }
 
-/** Read the issuer's CredentialRedeemed events for this commitment (latest 1000). */
+/** Read the issuer's CredentialRedeemed events for this commitment (recent window, key-filtered). */
 async function getRedeemedEvent(commitmentHash) {
   // NOTE: commitment_hash is NOT a #[key] field on this event — it lives in
-  // data[0]. The keys array for CredentialRedeemed only ever contains the
-  // event-name selector. A keys filter like [[], [commitmentHash]] checks
-  // position 1 of the keys array, which never exists, so it always returns
-  // zero events. Filter only by address here; the caller already does the
-  // real per-commitment match against data[0].
-  const res = await provider.getEvents({
-    from_block: { block_number: 0 },
-    to_block: 'latest',
-    address: config.credentialIssuerAddress,
-    continuation_token: undefined,
-    chunk_size: 1000,
-  });
-  return res.events ?? [];
+  // data[0]. So we do NOT append it to the keys filter (a filter like
+  // [[sel],[cmt]] matches keys[1], which never exists → 0 events); we match
+  // data[0] client-side. keys[0] = the event-name selector,
+  // 0x1215f4a9813f52ca5d747a3e0f68b2a3d96d9b84f623c7643964508ccd2ffa7
+  // (verified on-chain: it is keys[0] of both observed CredentialRedeemed
+  // receipts).
+  //
+  // The Alchemy RPC pages issuer event history from the earliest block in
+  // ~81920-block slices (observed from block 0: each page returned empty
+  // events with a token "N-0", N incrementing by 81920). A from-0 scan
+  // therefore needs ~175 pages (~14.3M blocks) to reach today's events — far
+  // too slow and easy to cap off early (the relay's original single-page read
+  // always missed everything → always 402). Redemptions here always happen
+  // seconds before this call (the MCP redeems on-chain then forwards), so
+  // scan a recent window (latest - 5000 blocks ≈ hours of Sepolia) filtered
+  // by the event selector: that returns the events in ONE small call
+  // (observed), no pagination.
+  const latest = await provider.getBlockNumber();
+  const fromBlockNum = Math.max(0, latest - 5000);
+  const keyFilter = [['0x1215f4a9813f52ca5d747a3e0f68b2a3d96d9b84f623c7643964508ccd2ffa7']];
+  const events = [];
+  let continuation;
+  // Belt and braces: follow continuation tokens if the window overflows a page.
+  for (let page = 0; page < 10; page++) {
+    const opts = {
+      from_block: { block_number: fromBlockNum },
+      to_block: 'latest',
+      address: config.credentialIssuerAddress,
+      keys: keyFilter,
+      chunk_size: 1000,
+    };
+    if (continuation !== undefined) opts.continuation_token = continuation;
+    const res = await provider.getEvents(opts);
+    events.push(...(res.events ?? []));
+    continuation = res.continuation_token;
+    if (!continuation) break;
+  }
+  return events;
 }
 app.post('/infer', async (req, res) => {
   // (a) Validate claim_payload.
