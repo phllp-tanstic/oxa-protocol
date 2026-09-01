@@ -54,30 +54,6 @@ The Owner, Broker, and Endpoint are three distinct Starknet accounts ([docs/depl
 
 ## Architecture
 
-```
-       ┌──────────────┐         ┌──────────────┐          ┌──────────────┐
-       │     Owner    │         │    Broker    │          │   Endpoint   │
-       │ (policy,     │         │ (funds,      │          │ (agent /     │
-       │  allowlists) │         │  mint,       │          │  relay acct) │
-       └──────┬───────┘         └──────┬───────┘          └──────┬───────┘
-              │ policy check (read)      │                          │
-              │◀─────────────────────────┴────────────────────────┤ redeem
-              │                                                    │ on-chain
-       ┌──────┴────────────────────────────────────────────────────┴──────┐
-       │                    OxaPolicyRegistry (Sepolia)                   │
-       │                    OxaCredentialIssuer (Sepolia)                  │
-       └──────────────┬──────────────┬─────────────────┬──────────────┘
-                      │              │                 │
-                      │ Mint         │ Reclaim         │ Redeem (direct)
-                      ▼              ▼                 ▼
-            ┌─────────────────────────────────────────────────────┐
-            │                                                     │
-            │                      STRK20 Pool                      │
-            │   (shielded notes · private transfers · proving)    │
-            │                                                     │
-                        └─────────────────────────────────────────────────────┘
-```
-
 ### Credential lifecycle (sequence)
 
 ```mermaid
@@ -151,6 +127,15 @@ inputSchema:
   required: [claimPayload]
 ```
 
+`oxa_reclaim_expired`:
+```
+inputSchema:
+  type: object
+  properties:
+    commitmentHash: { type: string, description: "Commitment hash of the expired, unused credential to reclaim" }
+  required: [commitmentHash]
+```
+
 The `oxa_call_endpoint` tool calls the Broker's standalone `redeem()` on-chain — verified against the real `OxaCredentialIssuer` ABI — before forwarding to the self-operated relay (`docs/decisions/0003-demo-endpoint.md`). The relay re-verifies the credential (see below).
 
 ## Inference Relay
@@ -204,7 +189,7 @@ Configure via `broker/.env` (copy from `broker/.env.example`). Key variables:
 | `ENDPOINT_ACCOUNT_ADDRESS` / `ENDPOINT_PRIVATE_KEY` | Endpoint account (REQUIRED for MCP `oxa_call_endpoint`) |
 | `PRIVACY_POOL_ADDRESS` | STRK20 pool: `0x0254a6b2…` |
 | `POLICY_REGISTRY_ADDRESS` | `0x039cc9515534d60c…` |
-| `CREDENTIAL_ISSUER_ADDRESS` | `0x058cef9c73ab7868…` |
+| `CREDENTIAL_ISSUER_ADDRESS` | `0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650` |
 | `VIEWING_KEY` | Broker's canonical viewing key |
 | `PROVING_SERVICE_URL` | Self-hosted prover (REQUIRED — see `build-prover.yml`) |
 | `BROKER_BASE_URL` / `INFERENCE_RELAY_URL` | Service wiring (OPTIONAL) |
