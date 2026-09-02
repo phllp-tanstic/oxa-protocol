@@ -95,11 +95,11 @@
             </p>
 
             <div class="flex flex-col sm:flex-row gap-4 shrink-0 mt-2">
-              <a href="#" class="bg-[#F97316] text-[#111827] px-6 py-3.5 rounded-[31px] font-medium text-base hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2">
+              <a href="#try-it-yourself" class="bg-[#F97316] text-[#111827] px-6 py-3.5 rounded-[31px] font-medium text-base hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2">
                 Connect your Agent
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
               </a>
-              <a href="#" class="border px-6 py-3.5 rounded-[31px] font-medium text-base transition-colors flex items-center justify-center gap-2 border-[#E5E7EB] bg-white text-[#111827] hover:bg-gray-50">
+              <a href="https://github.com/phllp-tanstic/oxa-protocol" class="border px-6 py-3.5 rounded-[31px] font-medium text-base transition-colors flex items-center justify-center gap-2 border-[#E5E7EB] bg-white text-[#111827] hover:bg-gray-50">
                 Repository
                 <i data-lucide="github" class="w-4 h-4"></i>
               </a>
@@ -278,11 +278,12 @@
             </div>
             <div class="text-base text-[#4B5563] font-light flex-1">
               Full implementation. Shielded balances, anonymizer contracts,
-              on-chain policy enforcement, real mainnet-verified transactions.
+              on-chain policy enforcement, testnet-verified transactions,
+              mainnet in progress.
               This is the reference implementation the rest of OXA's
               architecture is proven against.
             </div>
-            <a href="#" class="text-[#111827] font-medium text-base hover:text-[#F97316] transition-colors whitespace-nowrap">
+            <a href="#try-it-yourself" class="text-[#111827] font-medium text-base hover:text-[#F97316] transition-colors whitespace-nowrap">
               See it live →
             </a>
           </div>
@@ -344,6 +345,137 @@
                 The endpoint redeems the credential directly, once. Funds land.
                 Replay is structurally impossible, not just discouraged.
               </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Try It Yourself (live hosted demo) -->
+    <section id="try-it-yourself" class="py-16 md:py-32 bg-[#2C1D11] text-[#E4E2DD] rounded-[32px] md:rounded-[48px] mx-4 md:mx-6 mb-8">
+      <div class="max-w-7xl mx-auto px-6">
+        <!-- Section header -->
+        <div class="reveal max-w-3xl mb-12 md:mb-20">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider">
+            Try it yourself — no wallet, no install
+          </div>
+          <h2 class="text-4xl md:text-5xl font-normal tracking-tight mb-8 leading-[1.1]">
+            Point your agent at the live broker.
+          </h2>
+          <p class="text-xl text-[#E4E2DD]/70 leading-relaxed font-light">
+            The MCP server and broker below are the real deployment — the same
+            endpoints Claude uses. Prefer clicking over prompting? Run the
+            three-step live demo at the bottom of this section.
+          </p>
+        </div>
+
+        <!-- PART A: Connect Your Agent -->
+        <div class="reveal">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-10 uppercase tracking-wider">
+            Connect your agent
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Step 01 -->
+            <div class="relative bg-[#1C120B] border border-[#E4E2DD]/10 rounded-[32px] p-8 pt-12">
+              <div class="absolute -top-4 left-8 bg-[#F97316] text-[#111827] font-mono font-medium text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#2C1D11]">
+                01
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">Copy the MCP server URL</h4>
+              <div class="bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-[16px] p-3 font-mono text-xs text-[#E4E2DD]/90 break-all">
+                https://35-255-82-183.sslip.io/mcp
+              </div>
+              <button type="button" data-copy="https://35-255-82-183.sslip.io/mcp" class="copy-btn mt-4 bg-[#F97316] text-[#111827] px-3 py-1.5 rounded-full font-mono text-xs font-medium hover:bg-[#D97706] transition-colors">
+                Copy URL
+              </button>
+            </div>
+            <!-- Step 02 -->
+            <div class="relative bg-[#1C120B] border border-[#E4E2DD]/10 rounded-[32px] p-8 pt-12">
+              <div class="absolute -top-4 left-8 bg-[#F97316] text-[#111827] font-mono font-medium text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#2C1D11]">
+                02
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">For Claude Code</h4>
+              <div class="bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-[16px] p-3 font-mono text-xs text-[#E4E2DD]/90 break-all">
+                claude mcp add --transport http oxa https://35-255-82-183.sslip.io/mcp
+              </div>
+              <button type="button" data-copy="claude mcp add --transport http oxa https://35-255-82-183.sslip.io/mcp" class="copy-btn mt-4 bg-[#F97316] text-[#111827] px-3 py-1.5 rounded-full font-mono text-xs font-medium hover:bg-[#D97706] transition-colors">
+                Copy command
+              </button>
+            </div>
+            <!-- Step 03 -->
+            <div class="relative bg-[#1C120B] border border-[#E4E2DD]/10 rounded-[32px] p-8 pt-12">
+              <div class="absolute -top-4 left-8 bg-[#F97316] text-[#111827] font-mono font-medium text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#2C1D11]">
+                03
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">For Claude.ai — no install</h4>
+              <p class="text-base text-[#E4E2DD]/70 font-light leading-relaxed">
+                Settings → Connectors → Add custom connector → paste the URL
+                from step 01 → Add. The oxa tools appear in new chats
+                automatically.
+              </p>
+            </div>
+            <!-- Step 04 -->
+            <div class="relative bg-[#1C120B] border border-[#E4E2DD]/10 rounded-[32px] p-8 pt-12">
+              <div class="absolute -top-4 left-8 bg-[#F97316] text-[#111827] font-mono font-medium text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#2C1D11]">
+                04
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">Use the tools</h4>
+              <p class="text-base text-[#E4E2DD]/70 font-light leading-relaxed">
+                Ask Claude to pay for something. It will call
+                <span class="font-mono text-[#D97706]">oxa_request_credential</span>,
+                <span class="font-mono text-[#D97706]">oxa_call_endpoint</span>, or
+                <span class="font-mono text-[#D97706]">oxa_reclaim_expired</span> —
+                mid-task, autonomously.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- PART B: Live Demo -->
+        <div class="reveal delay-100 mt-16 md:mt-24">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+            <div class="text-[#F97316] font-mono text-xs font-medium uppercase tracking-wider">
+              Live demo — every step is a real API call
+            </div>
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#D97706]/30 bg-[#F97316]/10 text-[#F97316] font-mono text-xs font-medium tracking-tight uppercase">
+              Sepolia Testnet Demo
+            </div>
+          </div>
+
+          <div class="w-full text-left rounded-[32px] bg-[#1C120B] border border-[#E4E2DD]/10 overflow-hidden shadow-2xl">
+            <div class="flex items-center px-5 py-3 bg-[#2C1D11]/80 border-b border-[#E4E2DD]/5">
+              <div class="flex gap-2 mr-4">
+                <div class="w-2.5 h-2.5 rounded-full bg-[#E4E2DD]/20"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-[#E4E2DD]/20"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-[#E4E2DD]/20"></div>
+              </div>
+              <div class="text-xs font-mono text-[#E4E2DD]/40">
+                live-demo — https://35-255-82-183.sslip.io
+              </div>
+            </div>
+            <div class="p-6 md:p-10">
+              <div class="flex flex-col lg:flex-row lg:items-end gap-4 lg:gap-6 mb-6">
+                <div>
+                  <label for="demo-amount" class="block font-mono text-xs text-[#E4E2DD]/40 mb-2 uppercase tracking-wider">
+                    Amount (raw units, 18 dec)
+                  </label>
+                  <input id="demo-amount" type="text" value="100" class="bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-full px-4 py-2.5 font-mono text-sm text-[#E4E2DD] w-56 focus:outline-none focus:border-[#F97316]/50">
+                </div>
+                <div class="flex flex-wrap gap-3">
+                  <button id="demo-btn-1" type="button" class="bg-[#F97316] text-[#111827] px-5 py-2.5 rounded-full font-medium text-sm hover:bg-[#D97706] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    1. Request Credential
+                  </button>
+                  <button id="demo-btn-2" type="button" disabled class="bg-[#F97316] text-[#111827] px-5 py-2.5 rounded-full font-medium text-sm hover:bg-[#D97706] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    2. Call Endpoint (Redeem + Weather)
+                  </button>
+                  <button id="demo-btn-3" type="button" disabled class="bg-[#F97316] text-[#111827] px-5 py-2.5 rounded-full font-medium text-sm hover:bg-[#D97706] transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
+                    3. Reclaim (after expiry)
+                  </button>
+                </div>
+              </div>
+              <div id="demo-expiry" class="hidden mb-5 bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-[16px] px-4 py-3 font-mono text-xs text-[#E4E2DD]/70 leading-relaxed"></div>
+              <div id="demo-log" class="bg-[#2C1D11]/80 border border-[#E4E2DD]/5 rounded-[24px] p-5 font-mono text-xs sm:text-sm h-72 overflow-y-auto leading-relaxed">
+                <div class="text-[#E4E2DD]/40">// idle — press "1. Request Credential" to mint a real credential on Starknet Sepolia. Real errors (policy rejection, NOT_YET_EXPIRED) are shown as they happen.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -871,7 +1003,7 @@
                 Launch App — Starknet
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
               </a>
-              <a href="#" class="border border-[#E5E7EB] bg-white text-[#111827] px-6 py-3.5 rounded-[31px] font-medium text-base hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+              <a href="https://github.com/phllp-tanstic/oxa-protocol" class="border border-[#E5E7EB] bg-white text-[#111827] px-6 py-3.5 rounded-[31px] font-medium text-base hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
                 View on GitHub
                 <i data-lucide="github" class="w-4 h-4"></i>
               </a>
@@ -888,7 +1020,7 @@
           <div class="font-mono font-medium tracking-tight text-xl">OXA</div>
           <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 md:gap-8 font-medium text-base text-[#4B5563]">
             <a href="#" class="hover:text-[#111827] transition-colors">Docs</a>
-            <a href="#" class="hover:text-[#111827] transition-colors">
+            <a href="https://github.com/phllp-tanstic/oxa-protocol" class="hover:text-[#111827] transition-colors">
               GitHub
             </a>
             <a href="#" class="hover:text-[#111827] transition-colors">
@@ -940,6 +1072,229 @@
           window.addEventListener('scroll', revealOnScroll);
           revealOnScroll(); // trigger on load
       });
+    </script>
+
+    <script>
+      // ===== Live demo wiring (landing page → real hosted broker/MCP) =====
+      (function () {
+        var API = 'https://35-255-82-183.sslip.io';
+        var VOYAGER_TX = 'https://sepolia.voyager.online/tx/';
+        var btn1 = document.getElementById('demo-btn-1');
+        var btn2 = document.getElementById('demo-btn-2');
+        var btn3 = document.getElementById('demo-btn-3');
+        var logBox = document.getElementById('demo-log');
+        var expiryBox = document.getElementById('demo-expiry');
+        var amountInput = document.getElementById('demo-amount');
+        var credential = null, commitmentHash = null, expiryMs = null, countdownTimer = null;
+
+        function log(text, cls) {
+          var line = document.createElement('div');
+          if (cls) line.className = cls;
+          line.textContent = text; // textContent only — API data never parsed as HTML
+          logBox.appendChild(line);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+        function logStep(text) { log('$ ' + text, 'text-[#F97316] font-medium mt-3'); }
+        function logError(text) { log('ERROR: ' + text, 'text-[#D97706] font-medium mt-1'); }
+        function logMuted(text) { log(text, 'text-[#E4E2DD]/60 pl-4'); }
+        function logField(label, value) {
+          var row = document.createElement('div');
+          row.className = 'pl-4';
+          var k = document.createElement('span');
+          k.className = 'text-[#E4E2DD]/40';
+          k.textContent = label + ': ';
+          var v = document.createElement('span');
+          v.className = 'text-[#D97706] break-all';
+          v.textContent = String(value);
+          row.appendChild(k); row.appendChild(v);
+          logBox.appendChild(row);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+        function logVoyager(label, hash) {
+          var row = document.createElement('div');
+          row.className = 'pl-4';
+          var k = document.createElement('span');
+          k.className = 'text-[#E4E2DD]/40';
+          k.textContent = label + ': ';
+          var a = document.createElement('a');
+          a.href = VOYAGER_TX + hash;
+          a.target = '_blank'; a.rel = 'noopener';
+          a.className = 'text-[#F97316] underline break-all';
+          a.textContent = hash;
+          row.appendChild(k); row.appendChild(a);
+          logBox.appendChild(row);
+          logBox.scrollTop = logBox.scrollHeight;
+        }
+        function shortHash(h) { return (h && h.length > 18) ? h.slice(0, 10) + '…' + h.slice(-6) : String(h); }
+
+        function startCountdown(tsRaw) {
+          var n = Number(tsRaw);
+          if (!isFinite(n) || n <= 0) {
+            expiryBox.textContent = 'Expiry: unexpected value (' + tsRaw + ')';
+            expiryBox.classList.remove('hidden');
+            return;
+          }
+          expiryMs = n < 1e12 ? n * 1000 : n;
+          expiryBox.classList.remove('hidden');
+          if (countdownTimer) clearInterval(countdownTimer);
+          var tick = function () {
+            var left = expiryMs - Date.now();
+            if (left <= 0) {
+              expiryBox.textContent = 'Credential TTL has fully elapsed — a reclaim would no longer be rejected as NOT_YET_EXPIRED.';
+              clearInterval(countdownTimer);
+              return;
+            }
+            var s = Math.floor(left / 1000);
+            var mm = String(Math.floor(s / 60)).padStart(2, '0');
+            var ss = String(s % 60).padStart(2, '0');
+            expiryBox.textContent = 'Credential expires at ' + new Date(expiryMs).toLocaleTimeString() +
+              ' — reclaim unlocks in ' + mm + ':' + ss +
+              ' (reclaiming early returns NOT_YET_EXPIRED — the pool is enforcing the TTL, not a bug).';
+          };
+          tick();
+          countdownTimer = setInterval(tick, 1000);
+        }
+
+        function refreshButtons(inFlight) {
+          btn1.disabled = !!inFlight;
+          btn2.disabled = !!inFlight || !credential;
+          btn3.disabled = !!inFlight || !credential;
+        }
+
+        async function postJSON(url, body) {
+          var res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+          var raw = await res.text();
+          var data = null;
+          try { data = raw ? JSON.parse(raw) : null; }
+          catch (e) { data = { error: raw || ('non-JSON response (HTTP ' + res.status + ')') }; }
+          return { ok: res.ok, status: res.status, data: data };
+        }
+
+        async function step1() {
+          var amount = (amountInput.value || '').trim();
+          if (!/^\d+$/.test(amount)) {
+            logError('Amount must be a decimal string in raw units, e.g. 100 (must be within the category\'s per-request policy cap).');
+            return;
+          }
+          refreshButtons(true);
+          logStep('POST /request-credential — {category: "test_mvl", endpointId: "endpoint_1", amount: ' + amount + '}');
+          try {
+            var r = await postJSON(API + '/request-credential', { category: 'test_mvl', endpointId: 'endpoint_1', amount: amount });
+            if (!r.ok || (r.data && r.data.error)) {
+              logError('HTTP ' + r.status + ' — ' + ((r.data && r.data.error) || 'unknown error'));
+              return;
+            }
+            credential = r.data; commitmentHash = null;
+            log('200 OK — real credential minted on Starknet Sepolia:', 'text-[#E4E2DD] font-medium');
+            logField('endpointId', credential.endpointId);
+            logField('token', credential.token);
+            logField('amount', credential.amount);
+            logField('mode', credential.mode);
+            logField('issuerContract', credential.issuerContract);
+            logField('credentialSecret', shortHash(credential.credentialSecret));
+            startCountdown(credential.expiryTimestamp);
+            logMuted('Credential held in this page only. Step 2 redeems it on-chain and fetches real weather for London (51.5, -0.12).');
+          } catch (err) {
+            logError('Network error: ' + err.message);
+          } finally {
+            refreshButtons(false);
+          }
+        }
+
+        async function step2() {
+          if (!credential) { logError('Request a credential first (step 1).'); return; }
+          refreshButtons(true);
+          logStep('POST /mcp — tools/call → oxa_call_endpoint (redeem + weather @ 51.5, -0.12)');
+          try {
+            var body = {
+              jsonrpc: '2.0', id: 1, method: 'tools/call',
+              params: { name: 'oxa_call_endpoint', arguments: {
+                claimPayload: { credentialSecret: credential.credentialSecret, endpointId: credential.endpointId || 'endpoint_1' },
+                request: { latitude: 51.5, longitude: -0.12 }
+              }}
+            };
+            var r = await postJSON(API + '/mcp', body);
+            if (r.data && r.data.error) {
+              logError('MCP error ' + r.data.error.code + ': ' + r.data.error.message);
+              return;
+            }
+            var result = r.data && r.data.result;
+            var innerText = result && Array.isArray(result.content) && result.content[0] && result.content[0].text;
+            if (!innerText) {
+              logError('Unexpected MCP response shape: ' + JSON.stringify(r.data).slice(0, 300));
+              return;
+            }
+            var inner;
+            try { inner = JSON.parse(innerText); }
+            catch (e) { logMuted('MCP text (not JSON): ' + innerText); return; }
+            if (result.isError) {
+              logError(typeof inner === 'string' ? inner : ((inner && inner.error) || 'tool error — see server logs'));
+              return;
+            }
+            log('Redeem verified on-chain. Weather response:', 'text-[#E4E2DD] font-medium');
+            var fields = (inner && typeof inner === 'object') ? inner : { result: inner };
+            Object.keys(fields).forEach(function (k) {
+              if (k === 'commitmentHash' || k === 'txHash') return;
+              logField(k, (typeof fields[k] === 'object') ? JSON.stringify(fields[k]) : fields[k]);
+            });
+            if (inner && inner.commitmentHash) {
+              commitmentHash = inner.commitmentHash;
+              logField('commitmentHash', commitmentHash);
+              logMuted('commitmentHash stored — step 3 (reclaim) targets this credential.');
+            }
+            if (inner && inner.txHash) logVoyager('redeem tx (Sepolia)', inner.txHash);
+          } catch (err) {
+            logError('Network error: ' + err.message);
+          } finally {
+            refreshButtons(false);
+          }
+        }
+        async function step3() {
+          if (!credential) { logError('Request a credential first (step 1).'); return; }
+          if (!commitmentHash) { logError('No commitmentHash yet — run step 2 first; reclaim targets the credential redeemed there.'); return; }
+          refreshButtons(true);
+          logStep('POST /reclaim-expired — {commitmentHash: ' + shortHash(commitmentHash) + '}');
+          try {
+            var r = await postJSON(API + '/reclaim-expired', { commitmentHash: commitmentHash });
+            if (!r.ok || (r.data && r.data.error)) {
+              logError('HTTP ' + r.status + ' — ' + ((r.data && r.data.error) || 'unknown error') + '  ← expected while the TTL is still running: NOT_YET_EXPIRED.');
+              return;
+            }
+            log('200 OK — expired credential reclaimed:', 'text-[#E4E2DD] font-medium');
+            Object.keys(r.data || {}).forEach(function (k) {
+              if (/txhash/i.test(k) && typeof r.data[k] === 'string') logVoyager(k + ' (Sepolia)', r.data[k]);
+              else logField(k, r.data[k]);
+            });
+          } catch (err) {
+            logError('Network error: ' + err.message);
+          } finally {
+            refreshButtons(false);
+          }
+        }
+
+        btn1.addEventListener('click', step1);
+        btn2.addEventListener('click', step2);
+        btn3.addEventListener('click', step3);
+
+        document.querySelectorAll('.copy-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var text = btn.getAttribute('data-copy');
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(function () {
+                var o = btn.textContent;
+                btn.textContent = 'Copied ✓';
+                setTimeout(function () { btn.textContent = o; }, 1500);
+              }).catch(function () { window.prompt('Copy this:', text); });
+            } else {
+              window.prompt('Copy this:', text);
+            }
+          });
+        });
+      })();
     </script>
   
 </body></html>
