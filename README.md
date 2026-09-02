@@ -136,11 +136,11 @@ inputSchema:
   required: [commitmentHash]
 ```
 
-The `oxa_call_endpoint` tool calls the Broker's standalone `redeem()` on-chain — verified against the real `OxaCredentialIssuer` ABI — before forwarding to the self-operated relay (`docs/decisions/0003-demo-endpoint.md`). The relay re-verifies the credential (see below).
+The `oxa_call_endpoint` tool calls the Broker's standalone `redeem()` on-chain — verified against the real `OxaCredentialIssuer` ABI — before forwarding to the self-operated relay. The relay re-verifies the credential (see below).
 
 ## Inference Relay
 
-`broker/scripts/inference-relay.mjs` (Decision 0003) wraps a real upstream service (Open-Meteo forecast API, no key needed) and serves `POST /infer` **only** to callers who have already paid on-chain. It does **not** trust the caller's claim: the credential's commitment is recomputed locally and its on-chain state is read directly from `OxaCredentialIssuer.get_credential` plus the `CredentialRedeemed` event — a replayed, never-redeemed, or only-reclaimed credential is rejected with `402 Payment Required`.
+`broker/scripts/inference-relay.mjs` wraps a real upstream service (Open-Meteo forecast API, no key needed) and serves `POST /infer` **only** to callers who have already paid on-chain. It does **not** trust the caller's claim: the credential's commitment is recomputed locally and its on-chain state is read directly from `OxaCredentialIssuer.get_credential` plus the `CredentialRedeemed` event — a replayed, never-redeemed, or only-reclaimed credential is rejected with `402 Payment Required`.
 
 ```
 POST /infer  { claim_payload: { credentialSecret, endpointId, payoutAddress? }, request: { latitude?, longitude?, ... } }

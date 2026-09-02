@@ -9,6 +9,22 @@ import { reclaimExpiredCredential } from './reclaim.js';
 const config = loadConfig();
 
 const app = express();
+
+// CORS for browser clients (e.g. the hosted landing page). Minimal explicit
+// middleware — no `cors` dependency. Mounted before express.json() so it also
+// answers preflight OPTIONS requests for all routes.
+app.use((req, res, next) => {
+  const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://phllp-tanstic.github.io';
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
+
 app.use(express.json());
 
 type Validation =

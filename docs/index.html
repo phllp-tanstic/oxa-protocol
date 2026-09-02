@@ -1,36 +1,945 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>OXA — Scoped Payment Credentials for Autonomous Agents</title>
-  <style>
-    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 3rem auto; padding: 0 1rem; color: #1f2328; line-height: 1.6; }
-    a { color: #0969da; }
-    h1 { font-size: 1.5rem; }
-    .muted { color: #656d76; }
-  </style>
-</head>
-<body>
-  <h1>OXA — Scoped Payment Credentials for Autonomous Agents</h1>
+<html lang="en" class="scroll-smooth bg-[#E4E2DD] text-[#111827] font-sans antialiased"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OXA — Privacy-preserving payment infrastructure</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      body { font-family: 'Inter', sans-serif; }
+      .font-mono { font-family: 'JetBrains Mono', monospace; }
 
-    <p>
-    An OXA credential is a one-time claim right: a fixed amount of a specific ERC-20, locked behind a cryptographic commitment, redeemable exactly once, by exactly one endpoint, within a fixed time window. Owners shield funds once into the STRK20 pool, then issue scoped, single-use payment credentials on demand — one per purchase — choosing, per action, whether that purchase settles privately or publicly.
-  </p>
+      /* Smooth reveal animations */
+      .reveal { opacity: 0; transform: translateY(16px); transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+      .reveal.active { opacity: 1; transform: translateY(0); }
+      .delay-100 { transition-delay: 100ms; }
+      .delay-200 { transition-delay: 200ms; }
 
-  <p>
-    Built specifically for the STRK20 ecosystem on Starknet: the shielded pool, mandatory deposit screening, viewing-key registration, private transfers, and a self-hosted prover are all real and fully exercised on Sepolia. The complete credential lifecycle — register, shield, mint, redeem, reclaim — is verified end-to-end against the live STRK20 privacy pool.
-  </p>
+      /* Hero Atmospheric Background */
+      .bg-hero-atmosphere {
+          background-color: #2C1D11;
+          background-image:
+              radial-gradient(circle at 50% 0%, rgba(249, 115, 22, 0.12) 0%, transparent 60%),
+              radial-gradient(circle at 85% 40%, rgba(217, 119, 6, 0.08) 0%, transparent 50%),
+              radial-gradient(circle at 15% 60%, rgba(249, 115, 22, 0.05) 0%, transparent 40%);
+      }
 
-  <p>
-    As a concrete example, an inference relay endpoint has been built to demonstrate the mechanism: a credential authorizes a single weather query, which is verified on-chain via the real STRK20 pool before the relay proxies the request to Open-Meteo.
-  </p>
+      /* Syntax Highlighting for Terminal */
+      .token-keyword { color: #F97316; }
+      .token-function { color: #E4E2DD; }
+      .token-string { color: #D97706; }
+      .token-property { color: rgba(228, 226, 221, 0.6); }
+      .token-number { color: #F97316; }
 
-  <ul>
-    <li><a href="https://github.com/phllp-tanstic/oxa-protocol">GitHub repository</a></li>
-    <li><a href="https://raw.githubusercontent.com/phllp-tanstic/oxa-protocol/main/strk20.json">strk20.json — verified transactions</a></li>
-  </ul>
+      /* Custom Table Styling */
+      table th { border-bottom: 1px solid rgba(229, 231, 235, 1); }
+      table td { border-bottom: 1px solid rgba(229, 231, 235, 0.5); }
+      table tr:last-child td { border-bottom: none; }
+    </style>
+  </head>
+  <body class="text-lg">
+    <!-- Nav (Absolute over Hero) -->
+    <nav class="relative md:absolute top-0 w-full z-50 px-6 py-6 md:py-8 text-[#111827] bg-[#E4E2DD] md:bg-transparent">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-start md:items-center justify-between gap-4 md:gap-6">
+        <div class="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-8 flex-1">
+          <div class="font-mono font-medium tracking-tight text-xl text-[#111827]">
+            OXA
+          </div>
+          <div class="flex flex-wrap items-center gap-3 md:gap-6 text-sm md:text-base font-medium text-[#4B5563]">
+            <a href="#" class="transition-colors hover:text-[#111827]">
+              Protocol
+            </a>
+            <a href="#" class="transition-colors hover:text-[#111827]">
+              Chains
+            </a>
+            <a href="#" class="transition-colors hover:text-[#111827]">
+              Developers
+            </a>
+            <a href="#" class="transition-colors hover:text-[#111827]">
+              Security
+            </a>
+            <a href="#" class="transition-colors hover:text-[#111827]">Docs</a>
+          </div>
+        </div>
+        <a href="#" class="bg-[#F97316] text-[#111827] px-4 md:px-5 py-2 md:py-2.5 rounded-full text-sm md:text-base font-medium hover:bg-[#D97706] transition-colors shrink-0 mt-1 md:mt-0">
+          Launch App
+          <span class="opacity-60 text-sm ml-1">(Starknet)</span>
+        </a>
+      </div>
+    </nav>
 
-  <p class="muted">Phase 3: live MCP endpoint URL will be linked here once hosted.</p>
-</body>
-</html>
+    <!-- Hero Section -->
+    <section class="relative pt-12 md:pt-40 pb-0 overflow-hidden text-[#111827]">
+      <div class="max-w-7xl mx-auto px-6 relative z-10">
+        <!-- Structural Container for Top Copy -->
+        <div class="reveal max-w-5xl active">
+          <!-- Eyebrow Pill -->
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#D97706]/30 bg-[#F97316]/10 text-[#F97316] font-mono text-xs font-medium mb-10 tracking-tight uppercase">
+            Privacy-preserving payment infrastructure for autonomous agents
+          </div>
+
+          <!-- Headline -->
+          <h1 class="text-5xl md:text-7xl font-normal tracking-tight leading-[1.05] mb-12">
+            Agents need to pay privately.
+            <br>
+            On whatever chain they're already on.
+          </h1>
+
+          <!-- Subhead & Actions Split -->
+          <div class="flex flex-col md:flex-row gap-12 justify-between items-start mb-8">
+            <p class="text-xl md:text-2xl leading-relaxed max-w-2xl font-light text-[#4B5563]">
+              OXA is scoped, single-use payment credential infrastructure for
+              autonomous agents.
+            </p>
+
+            <div class="flex flex-col sm:flex-row gap-4 shrink-0 mt-2">
+              <a href="#" class="bg-[#F97316] text-[#111827] px-6 py-3.5 rounded-[31px] font-medium text-base hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2">
+                Connect your Agent
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </a>
+              <a href="#" class="border px-6 py-3.5 rounded-[31px] font-medium text-base transition-colors flex items-center justify-center gap-2 border-[#E5E7EB] bg-white text-[#111827] hover:bg-gray-50">
+                Repository
+                <i data-lucide="github" class="w-4 h-4"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Micro-proof Line -->
+          <div class="flex items-center gap-3 text-sm font-mono mb-8 text-[#4B5563]">
+            <i data-lucide="shield-check" class="w-4 h-4 text-[#F97316]"></i>
+            Real shielded balances. Real anonymizer contracts. Real on-chain
+            settlement — not a testnet mockup.
+          </div>
+        </div>
+
+        <!-- Terminal Panel -->
+        <div class="reveal delay-100 p-4 sm:p-12 md:p-16 lg:p-24 overflow-hidden flex flex-col min-h-[40vh] md:min-h-[50vh] w-full bg-[url(https://hoirqrkdgbmvpwutwuwj.supabase.co/storage/v1/object/public/assets/assets/e8c8bc93-9fa2-4ae8-9066-52376ec84807_1600w.jpg?w=800&amp;q=80)] bg-cover bg-center rounded-[32px] md:rounded-[48px] relative shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] justify-center mt-8 md:mt-0">
+          <div class="relative w-full flex-1 flex flex-col rounded-[32px] bg-[#1C120B] border border-[#E4E2DD]/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] overflow-hidden transform hover:-translate-y-1 transition-transform duration-500">
+            <div class="flex items-center px-6 py-4 bg-[#2C1D11]/80 border-b border-[#E4E2DD]/5 backdrop-blur-sm">
+              <div class="flex gap-2 mr-4">
+                <div class="w-3 h-3 rounded-full bg-[#E4E2DD]/20"></div>
+                <div class="w-3 h-3 rounded-full bg-[#E4E2DD]/20"></div>
+                <div class="w-3 h-3 rounded-full bg-[#E4E2DD]/20"></div>
+              </div>
+              <div class="text-sm font-mono text-[#E4E2DD]/40">
+                oxa-agent-sdk.ts
+              </div>
+            </div>
+            <div class="p-10 md:p-16 lg:p-24 overflow-x-auto flex-1 flex flex-col justify-center">
+              <pre class="font-mono text-sm sm:text-lg md:text-2xl lg:text-3xl font-medium leading-relaxed text-[#E4E2DD]/90 overflow-x-auto"><code class=""><span class="token-keyword">const</span> credential <span class="token-keyword">=</span> <span class="token-keyword">await</span> oxa.<span class="token-function">requestCredential</span>({
+  <span class="token-property">category:</span> <span class="token-string">"inference_apis"</span>,
+  <span class="token-property">endpointId:</span> <span class="token-string">"0x..."</span>,
+  <span class="token-property">amount:</span> <span class="token-number">1_000_000n</span>,
+});</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ecosystem Strip (Replaces Logo Strip) -->
+
+    <!-- Problem Section -->
+    <section class="py-16 md:py-32 bg-[#E4E2DD]">
+      <div class="max-w-7xl mx-auto px-6 reveal">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 mb-12 md:mb-20">
+          <div class="lg:col-span-7">
+            <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider">
+              The problem with how agents pay today
+            </div>
+            <h2 class="text-4xl md:text-5xl font-normal tracking-tight text-[#111827] leading-[1.1]">
+              Every agent payment method today is a leak waiting to happen — on
+              every chain
+            </h2>
+          </div>
+          <div class="lg:col-span-5 lg:pt-10">
+            <p class="text-xl text-[#4B5563] leading-relaxed font-light">
+              A shared API key. A linked corporate card. A hot wallet with a
+              public address. Every funding source available to an autonomous
+              agent right now is static, reusable, and fully linkable — which
+              means one look at that source exposes an agent's entire vendor
+              list, spend cadence, and purchasing pattern, forever. This isn't a
+              Starknet problem or an Ethereum problem. It's structural to how
+              agents transact anywhere, regardless of chain.
+            </p>
+          </div>
+        </div>
+
+        <!-- 4-Up Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 reveal delay-100">
+          <div class="bg-transparent border border-[#E5E7EB] rounded-[32px] p-8 md:p-10 hover:border-[#D97706]/30 hover:bg-white/50 transition-all">
+            <div class="w-10 h-10 rounded-full bg-[#2C1D11]/5 flex items-center justify-center mb-6">
+              <i data-lucide="eye" class="w-5 h-5 text-[#2C1D11]"></i>
+            </div>
+            <h3 class="text-xl font-medium tracking-tight mb-3">
+              Competitive exposure
+            </h3>
+            <p class="text-[#4B5563] font-light leading-relaxed">
+              Watch a funding address for a day and you know exactly which data
+              vendors, model providers, and compute markets an agent fleet
+              depends on.
+            </p>
+          </div>
+          <div class="bg-transparent border border-[#E5E7EB] rounded-[32px] p-8 md:p-10 hover:border-[#D97706]/30 hover:bg-white/50 transition-all">
+            <div class="w-10 h-10 rounded-full bg-[#2C1D11]/5 flex items-center justify-center mb-6">
+              <i data-lucide="tags" class="w-5 h-5 text-[#2C1D11]"></i>
+            </div>
+            <h3 class="text-xl font-medium tracking-tight mb-3">
+              Price discrimination
+            </h3>
+            <p class="text-[#4B5563] font-light leading-relaxed">
+              A service that recognizes a repeat-paying address can quote it
+              differently than an unknown one — silently, with no way to tell.
+            </p>
+          </div>
+          <div class="bg-transparent border border-[#E5E7EB] rounded-[32px] p-8 md:p-10 hover:border-[#D97706]/30 hover:bg-white/50 transition-all">
+            <div class="w-10 h-10 rounded-full bg-[#2C1D11]/5 flex items-center justify-center mb-6">
+              <i data-lucide="bomb" class="w-5 h-5 text-[#2C1D11]"></i>
+            </div>
+            <h3 class="text-xl font-medium tracking-tight mb-3">
+              Blast radius
+            </h3>
+            <p class="text-[#4B5563] font-light leading-relaxed">
+              One exposed key or card number doesn't cost one purchase. It costs
+              the entire transaction history behind it.
+            </p>
+          </div>
+          <div class="bg-transparent border border-[#E5E7EB] rounded-[32px] p-8 md:p-10 hover:border-[#D97706]/30 hover:bg-white/50 transition-all">
+            <div class="w-10 h-10 rounded-full bg-[#2C1D11]/5 flex items-center justify-center mb-6">
+              <i data-lucide="sliders-horizontal" class="w-5 h-5 text-[#2C1D11]"></i>
+            </div>
+            <h3 class="text-xl font-medium tracking-tight mb-3">
+              No attribution control
+            </h3>
+            <p class="text-[#4B5563] font-light leading-relaxed">
+              Today's options are binary: a fully public wallet, or a card that
+              hides everything — including from your own audit trail. Nothing
+              lets you choose per purchase, on any chain.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Solution Section (Dark Surface) -->
+    <section class="py-16 md:py-32 bg-[#2C1D11] text-[#E4E2DD] rounded-[32px] md:rounded-[48px] mx-4 md:mx-6 mb-8">
+      <div class="max-w-7xl mx-auto px-6 reveal">
+        <div class="max-w-3xl">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider">
+            The fix
+          </div>
+          <h2 class="text-4xl md:text-5xl font-normal tracking-tight mb-8 leading-[1.1]">
+            One infrastructure layer.
+            <br>
+            Native privacy, per chain.
+          </h2>
+          <p class="text-xl text-[#E4E2DD]/70 leading-relaxed font-light mb-12">
+            Shield funds once. From there, every purchase gets its own
+            credential — capped to one amount, one endpoint, one expiry window,
+            redeemable exactly once. Choose, per action, whether that purchase
+            settles privately or publicly. This pattern doesn't change chain to
+            chain. What changes is how it's realized underneath: OXA builds on
+            whatever native privacy primitive a given chain actually offers,
+            rather than forcing one cryptographic model onto every ecosystem it
+            touches. Today, that means Starknet's STRK20 shielded-pool
+            architecture, live and real.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Chains & How it Works -->
+    <section class="py-16 md:py-24 bg-[#E4E2DD]">
+      <div class="max-w-7xl mx-auto px-6">
+        <!-- Chains Header -->
+        <div class="reveal mb-12 md:mb-20 max-w-3xl">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider">
+            Where OXA runs
+          </div>
+          <h2 class="text-4xl font-normal tracking-tight text-[#111827] mb-6 leading-[1.1]">
+            Live where the primitives are real. Expanding as they mature.
+          </h2>
+          <p class="text-xl text-[#4B5563] leading-relaxed font-light mb-8">
+            OXA doesn't claim uniform support across chains that don't yet have
+            the underlying privacy infrastructure to make good on that claim.
+            Here's what's actually true today, and what's directional.
+          </p>
+
+          <!-- Live Now Callout -->
+          <div class="inline-flex flex-col sm:flex-row gap-6 p-6 rounded-[32px] bg-white border border-[#E5E7EB] items-start sm:items-center">
+            <div class="flex items-center gap-3 font-mono font-medium text-[#F97316]">
+              <div class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F97316] opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-3 w-3 bg-[#F97316]"></span>
+              </div>
+              Live now: Starknet
+            </div>
+            <div class="text-base text-[#4B5563] font-light flex-1">
+              Full implementation. Shielded balances, anonymizer contracts,
+              on-chain policy enforcement, real mainnet-verified transactions.
+              This is the reference implementation the rest of OXA's
+              architecture is proven against.
+            </div>
+            <a href="#" class="text-[#111827] font-medium text-base hover:text-[#F97316] transition-colors whitespace-nowrap">
+              See it live →
+            </a>
+          </div>
+        </div>
+
+        <!-- How It Works Flow -->
+        <div class="reveal delay-100">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-10 uppercase tracking-wider">
+            The flow, live today (Starknet)
+          </div>
+          <h3 class="text-3xl font-normal tracking-tight text-[#111827] mb-12">
+            Four steps. Every one of them a real on-chain transaction.
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Step 1 -->
+            <div class="relative bg-white border border-[#E5E7EB] rounded-[32px] p-8 pt-12">
+              <div class="absolute -top-4 left-8 bg-[#2C1D11] text-[#E4E2DD] font-mono text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#E4E2DD]">
+                01
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">Shield</h4>
+              <p class="text-base text-[#4B5563] font-light leading-relaxed">
+                Connect your existing Starknet wallet and shield funds into the
+                pool. No new wallet, no new custody model.
+              </p>
+            </div>
+            <!-- Step 2 -->
+            <div class="relative bg-white border border-[#E5E7EB] rounded-[32px] p-8 pt-12">
+              <div class="absolute -top-4 left-8 bg-[#2C1D11] text-[#E4E2DD] font-mono text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#E4E2DD]">
+                02
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">
+                Set policy
+              </h4>
+              <p class="text-base text-[#4B5563] font-light leading-relaxed">
+                Define spend caps, endpoint allowlists, and privacy defaults per
+                category. Lock a category to private-only if it should never be
+                public.
+              </p>
+            </div>
+            <!-- Step 3 -->
+            <div class="relative bg-white border border-[#E5E7EB] rounded-[32px] p-8 pt-12">
+              <div class="absolute -top-4 left-8 bg-[#2C1D11] text-[#E4E2DD] font-mono text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#E4E2DD]">
+                03
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">Request</h4>
+              <p class="text-base text-[#4B5563] font-light leading-relaxed">
+                Mid-task, an agent asks for a scoped credential — one endpoint,
+                one amount, one TTL. Policy is checked before anything moves.
+              </p>
+            </div>
+            <!-- Step 4 -->
+            <div class="relative bg-[#2C1D11] text-[#E4E2DD] border border-[#2C1D11] rounded-[32px] p-8 pt-12 shadow-xl transform md:translate-y-4">
+              <div class="absolute -top-4 left-8 bg-[#F97316] text-[#111827] font-mono font-medium text-sm w-10 h-10 rounded-full flex items-center justify-center border-4 border-[#E4E2DD]">
+                04
+              </div>
+              <h4 class="text-xl font-medium tracking-tight mb-3">Redeem</h4>
+              <p class="text-base text-[#E4E2DD]/70 font-light leading-relaxed">
+                The endpoint redeems the credential directly, once. Funds land.
+                Replay is structurally impossible, not just discouraged.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Core Properties & Use Cases Grid -->
+    <section class="py-16 md:py-24 bg-[#E4E2DD] border-t border-[#E5E7EB]/50">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
+          <!-- Core Properties -->
+          <div class="reveal">
+            <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider">
+              What every credential guarantees
+            </div>
+            <div class="space-y-6">
+              <div class="flex gap-4 items-start">
+                <i data-lucide="check-circle-2" class="w-6 h-6 text-[#111827] shrink-0 mt-0.5"></i>
+                <div>
+                  <h4 class="text-lg font-medium tracking-tight mb-1">
+                    Single-use
+                  </h4>
+                  <p class="text-base text-[#4B5563] font-light">
+                    A redeemed credential cannot be redeemed again — enforced
+                    on-chain, not by convention.
+                  </p>
+                </div>
+              </div>
+              <div class="flex gap-4 items-start">
+                <i data-lucide="target" class="w-6 h-6 text-[#111827] shrink-0 mt-0.5"></i>
+                <div>
+                  <h4 class="text-lg font-medium tracking-tight mb-1">
+                    Endpoint-scoped
+                  </h4>
+                  <p class="text-base text-[#4B5563] font-light">
+                    A credential is only valid for the one service it was issued
+                    to.
+                  </p>
+                </div>
+              </div>
+              <div class="flex gap-4 items-start">
+                <i data-lucide="clock" class="w-6 h-6 text-[#111827] shrink-0 mt-0.5"></i>
+                <div>
+                  <h4 class="text-lg font-medium tracking-tight mb-1">
+                    Time-bound
+                  </h4>
+                  <p class="text-base text-[#4B5563] font-light">
+                    Every credential expires. Unused funds return to the owner,
+                    not to limbo.
+                  </p>
+                </div>
+              </div>
+              <div class="flex gap-4 items-start">
+                <i data-lucide="toggle-left" class="w-6 h-6 text-[#111827] shrink-0 mt-0.5"></i>
+                <div>
+                  <h4 class="text-lg font-medium tracking-tight mb-1">
+                    Mode-per-action
+                  </h4>
+                  <p class="text-base text-[#4B5563] font-light">
+                    Private or public is chosen per purchase, not once for the
+                    whole account.
+                  </p>
+                </div>
+              </div>
+              <div class="flex gap-4 items-start">
+                <i data-lucide="key" class="w-6 h-6 text-[#111827] shrink-0 mt-0.5"></i>
+                <div>
+                  <h4 class="text-lg font-medium tracking-tight mb-1">
+                    Non-custodial funding
+                  </h4>
+                  <p class="text-base text-[#4B5563] font-light">
+                    The owner's shielded balance stays theirs, on every chain —
+                    issuing never requires keys.
+                  </p>
+                </div>
+              </div>
+              <div class="flex gap-4 items-start">
+                <i data-lucide="file-check-2" class="w-6 h-6 text-[#111827] shrink-0 mt-0.5"></i>
+                <div>
+                  <h4 class="text-lg font-medium tracking-tight mb-1">
+                    On-chain enforced policy
+                  </h4>
+                  <p class="text-base text-[#4B5563] font-light">
+                    Spend caps and endpoint allowlists are checked in the
+                    contract itself.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div class="mt-8 p-6 bg-[#2C1D11]/5 rounded-[24px] text-sm text-[#4B5563] font-light italic">
+              These are OXA's invariants as a protocol. How each one is
+              technically enforced depends on the chain underneath — see
+              Security Model for the Starknet-specific implementation.
+            </div>
+          </div>
+
+          <!-- Use Cases -->
+          <div class="reveal delay-100 bg-white border border-[#E5E7EB] rounded-[32px] md:rounded-[48px] p-6 sm:p-10 md:p-12">
+            <div class="text-[#F97316] font-mono text-xs font-medium mb-8 uppercase tracking-wider">
+              Who this is for
+            </div>
+
+            <div class="space-y-8">
+              <div class="border-b border-[#E5E7EB]/60 pb-6 last:border-0 last:pb-0">
+                <h4 class="text-xl font-medium tracking-tight mb-2">
+                  Paid inference, per call
+                </h4>
+                <p class="text-[#4B5563] font-light">
+                  An agent calls a paid model API mid-task and pays per-request.
+                </p>
+              </div>
+              <div class="border-b border-[#E5E7EB]/60 pb-6 last:border-0 last:pb-0">
+                <h4 class="text-xl font-medium tracking-tight mb-2">
+                  Research without exposure
+                </h4>
+                <p class="text-[#4B5563] font-light">
+                  An agent buys a dataset without that purchase being linkable
+                  to its other recent purchases.
+                </p>
+              </div>
+              <div class="border-b border-[#E5E7EB]/60 pb-6 last:border-0 last:pb-0">
+                <h4 class="text-xl font-medium tracking-tight mb-2">
+                  Attribution when you want it
+                </h4>
+                <p class="text-[#4B5563] font-light">
+                  An agent pays a public bounty and this time wants the payment
+                  traced back to its owner. Same wallet, opposite choice.
+                </p>
+              </div>
+              <div class="border-b border-[#E5E7EB]/60 pb-6 last:border-0 last:pb-0">
+                <h4 class="text-xl font-medium tracking-tight mb-2">
+                  Agent-to-agent
+                </h4>
+                <p class="text-[#4B5563] font-light">
+                  One agent pays another for a sub-task, without either learning
+                  the other's full transaction history.
+                </p>
+              </div>
+              <div class="pb-0">
+                <h4 class="text-xl font-medium tracking-tight mb-2">
+                  Fleet-wide policy
+                </h4>
+                <p class="text-[#4B5563] font-light">
+                  Run a fleet of agents off one shielded balance, with
+                  per-category privacy rules enforced automatically.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Architecture & Dev Experience -->
+    <section class="py-16 md:py-32 bg-[#2C1D11] text-[#E4E2DD]">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center mb-16 md:mb-24 reveal">
+          <div>
+            <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider">
+              How it's actually built
+            </div>
+            <h2 class="text-4xl md:text-5xl font-normal tracking-tight mb-6 leading-[1.1]">
+              One pattern. Chain-native cryptography underneath.
+            </h2>
+            <p class="text-xl text-[#E4E2DD]/70 leading-relaxed font-light mb-10">
+              OXA's architecture separates a chain-agnostic pattern — shield
+              once, issue scoped one-time credentials, redeem once, reclaim if
+              unused — from the chain-specific primitives that make each step
+              real. On Starknet, that means composing STRK20's own already-live
+              infrastructure:
+            </p>
+
+            <ul class="space-y-4 font-mono text-sm font-medium">
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+                <span class="text-white">Owner Wallet</span>
+                <span class="text-[#E4E2DD]/50 font-sans font-light">
+                  — existing account, holds viewing key
+                </span>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+                <span class="text-white">Policy Registry</span>
+                <span class="text-[#E4E2DD]/50 font-sans font-light">
+                  — on-chain contract for caps/allowlists
+                </span>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+                <span class="text-white">Credential Issuer</span>
+                <span class="text-[#E4E2DD]/50 font-sans font-light">
+                  — anonymizer satisfying privacy_invoke
+                </span>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+                <span class="text-white">Broker</span>
+                <span class="text-[#E4E2DD]/50 font-sans font-light">
+                  — service agent talks to, resolves policy
+                </span>
+              </li>
+              <li class="flex items-center gap-3">
+                <span class="w-1.5 h-1.5 rounded-full bg-[#D97706]"></span>
+                <span class="text-white">Endpoint</span>
+                <span class="text-[#E4E2DD]/50 font-sans font-light">
+                  — crypto-native redeeming service
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Architecture Visual -->
+          <div class="relative bg-[#1C120B] rounded-[32px] md:rounded-[48px] p-4 sm:p-8 border border-[#E4E2DD]/10 h-full min-h-[400px] flex flex-col gap-4">
+            <div class="bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-[24px] p-6 flex-1 flex flex-col justify-center items-center text-center">
+              <i data-lucide="wallet" class="w-8 h-8 text-[#E4E2DD]/50 mb-3"></i>
+              <div class="font-mono text-sm mb-1">Owner Wallet</div>
+              <div class="text-xs text-[#E4E2DD]/40">Shields funds</div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+              <div class="bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-[24px] p-6 flex flex-col justify-center items-center text-center">
+                <i data-lucide="scroll-text" class="w-6 h-6 text-[#E4E2DD]/50 mb-3"></i>
+                <div class="font-mono text-xs">Policy Registry</div>
+              </div>
+              <div class="bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-[24px] p-6 flex flex-col justify-center items-center text-center">
+                <i data-lucide="fingerprint" class="w-6 h-6 text-[#F97316] mb-3"></i>
+                <div class="font-mono text-xs">Credential Issuer</div>
+              </div>
+            </div>
+            <div class="bg-[#2C1D11] border border-[#E4E2DD]/10 rounded-[24px] p-6 flex-1 flex flex-col sm:flex-row justify-between items-center gap-4 px-6 sm:px-10">
+              <div class="text-center">
+                <i data-lucide="bot" class="w-6 h-6 text-[#E4E2DD]/50 mx-auto mb-2"></i>
+                <div class="font-mono text-xs">Broker</div>
+              </div>
+              <i data-lucide="arrow-right-left" class="w-5 h-5 text-[#E4E2DD]/20 rotate-90 sm:rotate-0 shrink-0"></i>
+              <div class="text-center">
+                <i data-lucide="server" class="w-6 h-6 text-[#E4E2DD]/50 mx-auto mb-2"></i>
+                <div class="font-mono text-xs">Endpoint</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dev Experience Center Block -->
+        <div class="reveal delay-100 max-w-4xl mx-auto flex flex-col items-center text-center">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider">
+            Built for agents to call, not humans to click
+          </div>
+
+          <!-- Terminal Reuse -->
+          <div class="w-full text-left rounded-[32px] bg-[#1C120B] border border-[#E4E2DD]/10 overflow-hidden mb-8 shadow-2xl">
+            <div class="flex items-center px-5 py-3 bg-[#2C1D11]/80 border-b border-[#E4E2DD]/5">
+              <div class="flex gap-2 mr-4">
+                <div class="w-2.5 h-2.5 rounded-full bg-[#E4E2DD]/20"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-[#E4E2DD]/20"></div>
+                <div class="w-2.5 h-2.5 rounded-full bg-[#E4E2DD]/20"></div>
+              </div>
+              <div class="text-xs font-mono text-[#E4E2DD]/40">
+                Starknet Implementation
+              </div>
+            </div>
+            <div class="p-8">
+              <pre class="font-mono text-sm sm:text-lg font-medium leading-relaxed text-[#E4E2DD]/90 overflow-x-auto"><code><span class="token-keyword">const</span> credential <span class="token-keyword">=</span> <span class="token-keyword">await</span> oxa.<span class="token-function">requestCredential</span>({
+  <span class="token-property">category:</span> <span class="token-string">"inference_apis"</span>,
+  <span class="token-property">endpointId:</span> <span class="token-string">"0x..."</span>,
+  <span class="token-property">amount:</span> <span class="token-number">1_000_000n</span>,
+});</code></pre>
+            </div>
+          </div>
+
+          <p class="text-[#E4E2DD]/60 font-light max-w-2xl">
+            Works as a direct HTTP/RPC call to the Broker, or as an MCP server
+            any MCP-compatible agent — including Claude Code — can call
+            autonomously, mid-task.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Security & Comparison Table -->
+    <section class="py-16 md:py-32 bg-[#E4E2DD]">
+      <div class="max-w-7xl mx-auto px-6">
+        <!-- Security Model -->
+        <div class="reveal mb-16 md:mb-32 max-w-4xl mx-auto">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-6 uppercase tracking-wider text-center">
+            What's actually enforced, per chain
+          </div>
+          <h2 class="text-4xl font-normal tracking-tight text-[#111827] text-center mb-12">
+            Every claim here is checkable on-chain. Nothing hand-waved.
+          </h2>
+
+          <div class="bg-white border border-[#E5E7EB] rounded-[32px] md:rounded-[48px] p-6 md:p-10 mb-10 shadow-sm">
+            <ul class="space-y-5">
+              <li class="flex items-start gap-4">
+                <div class="w-6 h-6 rounded-full bg-[#F97316]/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <i data-lucide="check" class="w-4 h-4 text-[#F97316]"></i>
+                </div>
+                <span class="text-lg text-[#111827] font-light">
+                  Domain-separated commitments binding a credential's secret and
+                  its endpoint together.
+                </span>
+              </li>
+              <li class="flex items-start gap-4">
+                <div class="w-6 h-6 rounded-full bg-[#F97316]/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <i data-lucide="check" class="w-4 h-4 text-[#F97316]"></i>
+                </div>
+                <span class="text-lg text-[#111827] font-light">
+                  On-chain policy re-check at mint time, not trusted from an
+                  off-chain service alone.
+                </span>
+              </li>
+              <li class="flex items-start gap-4">
+                <div class="w-6 h-6 rounded-full bg-[#F97316]/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <i data-lucide="check" class="w-4 h-4 text-[#F97316]"></i>
+                </div>
+                <span class="text-lg text-[#111827] font-light">
+                  Checks-effects-interactions ordering on every state-changing
+                  call.
+                </span>
+              </li>
+              <li class="flex items-start gap-4">
+                <div class="w-6 h-6 rounded-full bg-[#F97316]/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <i data-lucide="check" class="w-4 h-4 text-[#F97316]"></i>
+                </div>
+                <span class="text-lg text-[#111827] font-light">
+                  Threat model published, not implied — every identified risk,
+                  including ones not yet fully closed, documented in the open.
+                </span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Status Callout -->
+          <div class="bg-[#D97706]/5 border border-[#D97706]/30 rounded-[24px] md:rounded-[32px] p-6 md:p-8 flex flex-col sm:flex-row items-start gap-4 sm:gap-5">
+            <i data-lucide="triangle-alert" class="w-6 h-6 text-[#D97706] shrink-0 mt-1"></i>
+            <p class="text-base text-[#D97706] leading-relaxed font-medium">
+              This pattern follows STRK20's own unaudited anonymizer reference.
+              Treat this as a working proof of the mechanism, not a
+              production-hardened system, until a formal audit says otherwise.
+              Each future chain implementation will carry its own,
+              separately-stated security model — security properties from one
+              chain's primitive don't transfer to another's by assumption.
+            </p>
+          </div>
+        </div>
+
+        <!-- Comparison Table -->
+        <div class="reveal delay-100">
+          <div class="text-[#F97316] font-mono text-xs font-medium mb-8 uppercase tracking-wider text-center">
+            Versus what agents use today
+          </div>
+
+          <div class="md:hidden flex items-center gap-2 text-xs text-[#4B5563] mb-3 font-mono">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+            </svg>
+            Swipe to scroll
+          </div>
+          <div class="bg-white border border-[#E5E7EB] rounded-[48px] overflow-hidden shadow-sm">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr class="bg-[#F3F1EC]/50">
+                    <th class="py-6 px-8 font-medium text-[#111827] w-1/3"></th>
+                    <th class="py-6 px-4 font-mono text-sm font-medium text-[#4B5563]">
+                      Static API key
+                    </th>
+                    <th class="py-6 px-4 font-mono text-sm font-medium text-[#4B5563]">
+                      Linked card
+                    </th>
+                    <th class="py-6 px-4 font-mono text-sm font-medium text-[#4B5563]">
+                      Plain wallet
+                    </th>
+                    <th class="py-6 px-8 font-mono text-sm font-medium text-[#F97316] bg-[#F97316]/5">
+                      OXA
+                    </th>
+                  </tr>
+                </thead>
+                <tbody class="text-base font-light">
+                  <tr>
+                    <td class="py-6 px-8 text-[#111827] font-medium">
+                      One-time use
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-8 text-[#111827] bg-[#F97316]/5">
+                      <i data-lucide="check" class="w-5 h-5 text-[#F97316]"></i>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-6 px-8 text-[#111827] font-medium">
+                      Endpoint-scoped
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-8 text-[#111827] bg-[#F97316]/5">
+                      <i data-lucide="check" class="w-5 h-5 text-[#F97316]"></i>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-6 px-8 text-[#111827] font-medium">
+                      Spend cap enforced on-chain
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-8 text-[#111827] bg-[#F97316]/5">
+                      <i data-lucide="check" class="w-5 h-5 text-[#F97316]"></i>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-6 px-8 text-[#111827] font-medium">
+                      Privacy chosen per purchase
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563]">
+                      <i data-lucide="x" class="w-5 h-5 opacity-40"></i>
+                    </td>
+                    <td class="py-6 px-8 text-[#111827] bg-[#F97316]/5">
+                      <i data-lucide="check" class="w-5 h-5 text-[#F97316]"></i>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-6 px-8 text-[#111827] font-medium">
+                      Adapts to chain's privacy model
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563] font-mono opacity-40">
+                      —
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563] font-mono opacity-40">
+                      —
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563] font-mono opacity-40">
+                      —
+                    </td>
+                    <td class="py-6 px-8 text-[#111827] bg-[#F97316]/5">
+                      <i data-lucide="check" class="w-5 h-5 text-[#F97316]"></i>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-6 px-8 text-[#111827] font-medium border-none">
+                      Blast radius of one leak
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563] border-none">
+                      Entire history
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563] border-none">
+                      Entire history
+                    </td>
+                    <td class="py-6 px-4 text-[#4B5563] border-none">
+                      Entire history
+                    </td>
+                    <td class="py-6 px-8 text-[#F97316] font-medium bg-[#F97316]/5 border-none">
+                      One credential
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA -->
+    <section class="py-16 md:py-24 bg-[#E4E2DD]">
+      <div class="max-w-7xl mx-auto px-6 mb-8">
+        <div class="p-8 md:p-16 lg:p-24 overflow-hidden text-[#E4E2DD] bg-[url(https://hoirqrkdgbmvpwutwuwj.supabase.co/storage/v1/object/public/assets/assets/e8c8bc93-9fa2-4ae8-9066-52376ec84807_1600w.jpg?w=800&amp;q=80)] bg-cover bg-center rounded-[32px] md:rounded-[48px] relative shadow-2xl">
+          <!-- Decorative visual layer -->
+          <div class="absolute inset-0 md:inset-auto md:right-0 md:bottom-0 md:top-0 w-full md:w-1/2 pointer-events-none opacity-40 md:opacity-100 overflow-hidden md:overflow-visible rounded-[32px] md:rounded-[48px]">
+            <div class="absolute right-0 top-1/2 -translate-y-1/2 w-full md:w-[600px] h-[300px] md:h-[600px] bg-[radial-gradient(circle_at_center,rgba(249,115,22,0.15)_0%,transparent_60%)] mix-blend-screen"></div>
+            <div class="absolute right-[-20%] md:right-12 top-1/2 -translate-y-1/2 opacity-30 md:opacity-50 scale-[0.6] md:scale-100 origin-right">
+              <svg width="360" height="360" viewBox="0 0 360 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="270" cy="90" r="4" fill="#F97316"></circle>
+                <circle cx="315" cy="225" r="6" fill="#D97706"></circle>
+                <circle cx="135" cy="270" r="4" fill="#F97316"></circle>
+                <circle cx="180" cy="135" r="8" fill="#F97316"></circle>
+                <circle cx="225" cy="180" r="3" fill="#D97706"></circle>
+                <line x1="180" y1="135" x2="270" y2="90" stroke="#F97316" stroke-width="1" stroke-dasharray="4 4" stroke-opacity="0.3"></line>
+                <line x1="180" y1="135" x2="225" y2="180" stroke="#F97316" stroke-width="1" stroke-opacity="0.5"></line>
+                <line x1="225" y1="180" x2="315" y2="225" stroke="#D97706" stroke-width="1" stroke-dasharray="4 4" stroke-opacity="0.3"></line>
+                <line x1="180" y1="135" x2="135" y2="270" stroke="#F97316" stroke-width="1" stroke-opacity="0.3"></line>
+                <rect x="164" y="119" width="32" height="32" rx="8" stroke="#F97316" stroke-width="2" stroke-opacity="0.5" fill="none"></rect>
+                <path d="M175 132H185V140H175V132Z" stroke="#F97316" stroke-width="1.5" stroke-opacity="0.8"></path>
+                <path d="M177 132V129C177 127.343 178.343 126 180 126C181.657 126 183 127.343 183 129V132" stroke="#F97316" stroke-width="1.5" stroke-opacity="0.8"></path>
+              </svg>
+            </div>
+          </div>
+
+          <div class="relative z-10 max-w-2xl reveal">
+            <h2 class="text-4xl md:text-5xl lg:text-6xl font-normal tracking-tight mb-6 leading-[1.05] text-left">
+              Infrastructure for private agent payments — wherever agents
+              transact.
+            </h2>
+            <p class="text-xl md:text-2xl text-[#E4E2DD]/70 font-light mb-12 text-left">
+              Live on Starknet today. Built to go wherever the primitives are
+              real.
+            </p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-start items-center shrink-0">
+              <a href="#" class="bg-[#F97316] text-[#111827] w-full sm:w-auto px-6 py-3.5 rounded-[31px] font-medium text-base hover:bg-[#D97706] transition-colors flex items-center justify-center gap-2">
+                Launch App — Starknet
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </a>
+              <a href="#" class="border border-[#E5E7EB] bg-white text-[#111827] px-6 py-3.5 rounded-[31px] font-medium text-base hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto">
+                View on GitHub
+                <i data-lucide="github" class="w-4 h-4"></i>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-[#E4E2DD] text-[#111827] py-12 pb-16 md:pb-24">
+      <div class="max-w-7xl mx-auto px-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 mb-24">
+          <div class="font-mono font-medium tracking-tight text-xl">OXA</div>
+          <div class="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-4 md:gap-8 font-medium text-base text-[#4B5563]">
+            <a href="#" class="hover:text-[#111827] transition-colors">Docs</a>
+            <a href="#" class="hover:text-[#111827] transition-colors">
+              GitHub
+            </a>
+            <a href="#" class="hover:text-[#111827] transition-colors">
+              Protocol
+            </a>
+            <a href="#" class="hover:text-[#111827] transition-colors">
+              Chains
+            </a>
+            <a href="#" class="hover:text-[#111827] transition-colors">
+              Security
+            </a>
+          </div>
+        </div>
+        <div class="flex flex-col sm:flex-row justify-between items-center gap-4 pt-8 border-t border-[#111827]/10 text-sm font-light text-[#4B5563]">
+          <div>© 2026 OXA</div>
+          <a href="#" class="hover:text-[#111827] transition-colors flex items-center" aria-label="X (Twitter)">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 24.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.007 4.15H5.078z"></path>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // Initialize Lucide Icons with specific stroke width
+      lucide.createIcons({
+          attrs: {
+              'stroke-width': 1.5
+          }
+      });
+
+      // Simple scroll reveal
+      document.addEventListener('DOMContentLoaded', () => {
+          const reveals = document.querySelectorAll('.reveal');
+
+          const revealOnScroll = () => {
+              const windowHeight = window.innerHeight;
+              const elementVisible = 100;
+
+              reveals.forEach((reveal) => {
+                  const elementTop = reveal.getBoundingClientRect().top;
+                  if (elementTop < windowHeight - elementVisible) {
+                      reveal.classList.add('active');
+                  }
+              });
+          };
+
+          window.addEventListener('scroll', revealOnScroll);
+          revealOnScroll(); // trigger on load
+      });
+    </script>
+  
+</body></html>

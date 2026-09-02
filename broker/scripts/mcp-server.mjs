@@ -283,6 +283,21 @@ function startServer() {
     throw new Error(`Invalid MCP_PORT: "${process.env.MCP_PORT}"`);
   }
 
+  // CORS for browser clients (e.g. the hosted landing page). Sets response
+  // headers and short-circuits preflight OPTIONS. Complementary to (not a
+  // replacement for) checkOrigin() below, which remains the security gate.
+  app.use((req, res, next) => {
+    const allowedOrigin = process.env.ALLOWED_ORIGIN || 'https://phllp-tanstic.github.io';
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') {
+      res.sendStatus(204);
+      return;
+    }
+    next();
+  });
+
   app.use(express.json());
 
   // body-parser returns a raw HTML 500 on malformed JSON. Catch it and return
