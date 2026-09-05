@@ -1,6 +1,3 @@
-// DRY-RUN ONLY COPY of register-broker.mjs targeting MAINNET.
-// Contains a hard stop before any broadcast: it computes the proof and then
-// REFUSES to send anything. This script can never broadcast a transaction.
 import { Account, RpcProvider, constants } from "starknet";
 import { createPrivateTransfers } from "@starkware-libs/starknet-privacy-sdk";
 import "dotenv/config";
@@ -63,29 +60,6 @@ async function main() {
     proof.proofFacts && proof.proofFacts.length > 0
       ? { proofFacts: proof.proofFacts, proof: proof.data }
       : {};
-  // ===== READ-ONLY FEE SIMULATION (estimateFee — free, never broadcasts) =====
-  // estimateFee is a read-only RPC simulation (starknet_estimateFee) of the
-  // apply_actions call. It is what surfaces a contract-level OS-hash rejection
-  // without sending anything. The result is logged but NEVER acted upon: the
-  // hard stop below fires unconditionally, whatever estimateFee returns.
-  try {
-    const feeEstimate = await account.estimateInvokeFee(call, { tip: 0n, ...proofDetails });
-    console.log(
-      "ESTIMATE FEE (read-only simulation, NOT a broadcast) — SUCCEEDED:",
-      JSON.stringify(feeEstimate, (k, v) => (typeof v === "bigint" ? v.toString() : v))
-    );
-  } catch (err) {
-    console.log("ESTIMATE FEE (read-only simulation, NOT a broadcast) — FAILED:");
-    console.dir(err, { depth: 4 });
-  }
-
-  // ===== HARD STOP — DRY RUN SAFEGUARD =====
-  // The proof has been computed and the read-only fee simulation (above) has
-  // been attempted. Everything after this throw would broadcast a real mainnet
-  // transaction (account.execute -> send). Unreachable BY DESIGN — this script
-  // cannot broadcast, even if estimateFee succeeded.
-  throw new Error('DRY RUN: refusing to broadcast on mainnet, proof computed successfully, stopping here');
-
   console.log(
     `Step 2/3 — proof computed (proofFacts: ${proof.proofFacts?.length ?? 0} items, proof attached: ${"proof" in proofDetails}). Broadcasting apply_actions call to the pool:`
   );
@@ -109,10 +83,10 @@ async function main() {
     return;
   }
 
-  console.log("MAINNET (DRY RUN): ViewingKeySet registration transaction SUCCEEDED on MAINNET (DRY RUN).");
-  console.log("Voyager MAINNET (DRY RUN) (tx):      https://voyager.online/tx/" + tx.transaction_hash);
+  console.log("CONFIRMED: ViewingKeySet registration transaction SUCCEEDED on MAINNET.");
+  console.log("Voyager (tx):      https://voyager.online/tx/" + tx.transaction_hash);
   console.log(
-    "Voyager MAINNET (DRY RUN) (account): https://voyager.online/contract/" +
+    "Voyager (account): https://voyager.online/contract/" +
       process.env.BROKER_ACCOUNT_ADDRESS
   );
 }

@@ -3,37 +3,65 @@
     {
       "type": "register",
       "hash": "0x3586720c6a26c3092afe166d386326a7cea23551939617a4053fee0ac01f01a",
-      "link": "https://sepolia.voyager.online/tx/0x3586720c6a26c3092afe166d386326a7cea23551939617a4053fee0ac01f01a"
+      "link": "https://sepolia.voyager.online/tx/0x3586720c6a26c3092afe166d386326a7cea23551939617a4053fee0ac01f01a",
+      "network": "sepolia"
     },
     {
       "type": "declare",
       "hash": "0x2274ed95e3518794554d1464e1e9c05608cda1823e9c4f66b766f6db94e03b",
-      "link": "https://sepolia.voyager.online/tx/0x2274ed95e3518794554d1464e1e9c05608cda1823e9c4f66b766f6db94e03b"
+      "link": "https://sepolia.voyager.online/tx/0x2274ed95e3518794554d1464e1e9c05608cda1823e9c4f66b766f6db94e03b",
+      "network": "sepolia"
     },
     {
       "type": "deploy",
       "hash": "0x045a7e792b3bf30d77e293f29def79ee6d88d93fbceed665d1a52a97aa145d5a",
-      "link": "https://sepolia.voyager.online/tx/0x045a7e792b3bf30d77e293f29def79ee6d88d93fbceed665d1a52a97aa145d5a"
+      "link": "https://sepolia.voyager.online/tx/0x045a7e792b3bf30d77e293f29def79ee6d88d93fbceed665d1a52a97aa145d5a",
+      "network": "sepolia"
     },
     {
       "type": "shield",
       "hash": "0x01d6b658fb5cdfcb1400f716d24ee69bc2fc595c1e2f970043c317843cb9996b",
-      "link": "https://sepolia.voyager.online/tx/0x01d6b658fb5cdfcb1400f716d24ee69bc2fc595c1e2f970043c317843cb9996b"
+      "link": "https://sepolia.voyager.online/tx/0x01d6b658fb5cdfcb1400f716d24ee69bc2fc595c1e2f970043c317843cb9996b",
+      "network": "sepolia"
     },
     {
       "type": "mint",
       "hash": "0x4d41aaa4f7df5a84ad73a6f9b030a0b71402fbe16ce333791ebbbf9c95215ae",
-      "link": "https://sepolia.voyager.online/tx/0x4d41aaa4f7df5a84ad73a6f9b030a0b71402fbe16ce333791ebbbf9c95215ae"
+      "link": "https://sepolia.voyager.online/tx/0x4d41aaa4f7df5a84ad73a6f9b030a0b71402fbe16ce333791ebbbf9c95215ae",
+      "network": "sepolia"
     },
     {
       "type": "redeem",
       "hash": "0x2839990c2eacc1fedca3211933e061b81c09856e6d7d7682131f6282203aba7",
-      "link": "https://sepolia.voyager.online/tx/0x2839990c2eacc1fedca3211933e061b81c09856e6d7d7682131f6282203aba7"
+      "link": "https://sepolia.voyager.online/tx/0x2839990c2eacc1fedca3211933e061b81c09856e6d7d7682131f6282203aba7",
+      "network": "sepolia"
     },
     {
       "type": "reclaim",
       "hash": "0x827deafd952c36b93ad5f2385d6a8a9610c6b3b5ccb15d3e322aae55223ae8",
-      "link": "https://sepolia.voyager.online/tx/0x827deafd952c36b93ad5f2385d6a8a9610c6b3b5ccb15d3e322aae55223ae8"
+      "link": "https://sepolia.voyager.online/tx/0x827deafd952c36b93ad5f2385d6a8a9610c6b3b5ccb15d3e322aae55223ae8",
+      "network": "sepolia"
+    },
+    {
+      "type": "register",
+      "hash": "0x6fd04c6c9909cc639529c45d9796a0302194481c1f80ca46d3ba6bf7f60b9c2",
+      "link": "https://voyager.online/tx/0x6fd04c6c9909cc639529c45d9796a0302194481c1f80ca46d3ba6bf7f60b9c2",
+      "network": "mainnet",
+      "note": "Real call against the STRK20 pool contract (0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a). Verified: SUCCEEDED at block 14399936."
+    },
+    {
+      "type": "approve",
+      "hash": "0x14ca98dea594cc3e918f60863f4113d95229d8b0d02e59d93c4873e63c34658",
+      "link": "https://voyager.online/tx/0x14ca98dea594cc3e918f60863f4113d95229d8b0d02e59d93c4873e63c34658",
+      "network": "mainnet",
+      "note": "ERC20 approve (5 STRK) — prerequisite allowance for the pool, not a direct pool call. Verified: SUCCEEDED at block 14388155."
+    },
+    {
+      "type": "approve",
+      "hash": "0x4e8727effe7ccec893dc9e6dbf22b3017528bac8e9dc39d40725b3167abb41f",
+      "link": "https://voyager.online/tx/0x4e8727effe7ccec893dc9e6dbf22b3017528bac8e9dc39d40725b3167abb41f",
+      "network": "mainnet",
+      "note": "ERC20 approve (20 STRK) — prerequisite allowance for the pool, not a direct pool call. Verified: SUCCEEDED at block 14399480."
     }
   ],
   "contracts": [
@@ -48,6 +76,13 @@
       "address": "0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650",
       "network": "sepolia",
       "link": "https://sepolia.voyager.online/contract/0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650"
+    },
+    {
+      "name": "STRK20 Privacy Pool (external)",
+      "address": "0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a",
+      "network": "mainnet",
+      "link": "https://voyager.online/contract/0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a",
+      "note": "External STRK20 protocol contract — not an OXA-deployed contract. The register mainnet tx (0x6fd04c6c…) calls this pool."
     }
   ],
   "demo_video": "",

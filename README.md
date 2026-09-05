@@ -209,6 +209,14 @@ All transactions and contracts below are on Starknet **Sepolia** testnet, confir
 | redeem | `0x2839990c2eacc1fedca3211933e061b81c09856e6d7d7682131f6282203aba7` | [tx](https://sepolia.voyager.online/tx/0x2839990c2eacc1fedca3211933e061b81c09856e6d7d7682131f6282203aba7) |
 | reclaim | `0x827deafd952c36b93ad5f2385d6a8a9610c6b3b5ccb15d3e322aae55223ae8` | [tx](https://sepolia.voyager.online/tx/0x827deafd952c36b93ad5f2385d6a8a9610c6b3b5ccb15d3e322aae55223ae8) |
 
+**Transactions (MAINNET):**
+
+| Type | Hash | Voyager | Notes |
+|------|------|---------|-------|
+| register | `0x6fd04c6c9909cc639529c45d9796a0302194481c1f80ca46d3ba6bf7f60b9c2` | [tx](https://voyager.online/tx/0x6fd04c6c9909cc639529c45d9796a0302194481c1f80ca46d3ba6bf7f60b9c2) | Real call against the STRK20 pool. SUCCEEDED at block 14399936. |
+| approve | `0x14ca98dea594cc3e918f60863f4113d95229d8b0d02e59d93c4873e63c34658` | [tx](https://voyager.online/tx/0x14ca98dea594cc3e918f60863f4113d95229d8b0d02e59d93c4873e63c34658) | ERC20 approve (5 STRK), prerequisite only — not a direct pool call. SUCCEEDED at block 14388155. |
+| approve | `0x4e8727effe7ccec893dc9e6dbf22b3017528bac8e9dc39d40725b3167abb41f` | [tx](https://voyager.online/tx/0x4e8727effe7ccec893dc9e6dbf22b3017528bac8e9dc39d40725b3167abb41f) | ERC20 approve (20 STRK), prerequisite only — not a direct pool call. SUCCEEDED at block 14399480. |
+
 **Contracts (Sepolia):**
 
 | Name | Address | Voyager |
@@ -216,10 +224,16 @@ All transactions and contracts below are on Starknet **Sepolia** testnet, confir
 | OxaPolicyRegistry | `0x039cc9515534d60c65e955139a4c092e66e3fd9fe788714f3afa730352c9c4a0` | [contract](https://sepolia.voyager.online/contract/0x039cc9515534d60c65e955139a4c092e66e3fd9fe788714f3afa730352c9c4a0) |
 | OxaCredentialIssuer | `0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650` | [contract](https://sepolia.voyager.online/contract/0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650) |
 
+**Contracts (MAINNET):**
+
+| Name | Address | Voyager | Notes |
+|------|---------|---------|-------|
+| STRK20 Privacy Pool (external) | `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a` | [contract](https://voyager.online/contract/0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a) | External STRK20 protocol contract — not OXA-deployed. The register mainnet tx calls this pool. |
+
 ## Known Limitations & Roadmap
 
-- **STRK20 hosted services on mainnet:** the STRK20 indexer and proving service URLs are not yet officially published for mainnet by the protocol team (see [starkience/strk20-hackathon#158](https://github.com/starkience/strk20-hackathon/issues/158) — a documented ecosystem gap). Self-hosting remains a viable route (the prover is buildable from source via `.github/workflows/build-prover.yml`).
-- **Sepolia fully proven; mainnet in progress.** The complete lifecycle is verified on Sepolia (balances, tx hashes, and contracts above). Mainnet deployment mirrors the Sepolia setup.
+- **Mainnet registration proven working.** The full registration flow (proof computation + on-chain registration) is now verified on Starknet mainnet against the live STRK20 pool. A real `register` call succeeded at block 14399936 — see [Verified Evidence](#verified-evidence) below. This was achieved with a self-hosted prover pointed at a verified-complete Alchemy mainnet RPC endpoint (Lava's mainnet RPC omits `state_diff_commitment` on historical block-by-number queries, which breaks proof computation; Alchemy returns the complete data).
+- **One of three required pool-touching mainnet transactions so far.** The hackathon requires three mainnet transactions that each prove a real call against the STRK20 pool. Currently only `register` directly touches the pool; shield and the remaining pool interactions are still needed for full eligibility. (Two ERC20 approve transactions are also recorded for transparency, but they are prerequisite allowances, not direct pool calls.)
 - **Public MCP hosting (Phase 3):** the MCP endpoint is locally testable; a public URL will be linked from the landing page once hosted.
 
 ## Security Notes
