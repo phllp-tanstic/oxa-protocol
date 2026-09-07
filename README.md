@@ -1,253 +1,272 @@
 # OXA
 
-**Scoped, single-use payment credentials for autonomous agents, settled against the real STRK20 privacy pool on Starknet.**
+Scoped, single-use payment credentials for autonomous agents, issued against the STRK20 privacy pool on Starknet.
 
-> Single-use payment credentials for autonomous agents: a fixed sum, bound to a cryptographic commitment, redeemable exactly once by exactly one endpoint, within a fixed time window — funded from a shielded STRK20 balance.
+An owner shields funds into the privacy pool once. The broker then issues per-purchase credentials: a fixed amount of STRK locked behind a Poseidon commitment, redeemable exactly once, by exactly one endpoint ID, within a fixed TTL. Unused credentials are reclaimed to the broker's shielded balance after expiry.
 
-## For Judges — TL;DR
+**Status** (verified transactions in [`strk20.json`](strk20.json)):
 
-- **Live landing page:** https://phllp-tanstic.github.io/oxa-protocol/
-- **Verified on-chain transactions (`strk20.json`):** https://github.com/phllp-tanstic/oxa-protocol/blob/main/strk20.json
-- **Source repository:** https://github.com/phllp-tanstic/oxa-protocol
-- Full credential lifecycle — register, shield, mint, redeem, reclaim — proven end-to-end on Starknet **Sepolia** against the real STRK20 privacy pool. MCP agent integration (Claude Code) is tested locally via Streamable HTTP; public hosting of the MCP endpoint is Phase 3 (in progress).
-
-## Problem & Solution
-
-Autonomous agents need to pay for per-action interactions with crypto-native endpoints — an API call, a model inference, a settlement outcome — but today there is no scoped, revocable, privacy-preserving primitive for that. A wallet signature grants a smart contract unlimited access to a balance; an allowance is a blunt, non-expiring authorization; and every on-chain payment leaks the payer, the amount, and the counterparty to the public ledger. What an agent (or the account operating it) actually wants is close to a prepaid debit card for APIs: funds set aside once, the ability to hand out one specific, capped, expiring claim per purchase, and — critically — the option for the settlement itself to reveal nothing on-chain.
-
-OXA implements exactly that. Owners shield funds once into the STRK20 pool, then issue scoped, single-use payment credentials on demand — one per purchase — choosing, per action, whether that purchase settles privately or publicly. The build is specifically grounded in the STRK20 ecosystem rather than bolted onto a generic token: the shielded pool, the deposit-screening requirement, viewing-key registration, private transfers, and the self-hosted prover integration are all real and exercised. This repository is the OXA implementation for the STRK20 Private Sprint hackathon, developed in public per the hackathon rules.
-
-## What OXA Does
-
-An OXA credential is a one-time claim right: a fixed amount of a specific ERC-20, locked behind a cryptographic commitment, redeemable exactly once, by exactly one endpoint, within a fixed time window. Owners shield funds once into the STRK20 pool, then issue scoped, single-use payment credentials on demand — one per purchase — with the choice, made per action, of whether that purchase settles privately or publicly.
-
-The flow is enforced on-chain by two deployed Sepolia contracts:
-
-1. **Register** — the Broker registers with the STRK20 pool, bound to a viewing key.
-2. **Shield** — the Owner privately transfers funds into the pool (self-hosted prover proves it).
-3. **Mint** — the Broker creates a single-use credential (`commitment = poseidon(OXA_CREDENTIAL_TAG, secret, endpoint_id)`) for an amount bounded by the owner's policy.
-4. **Redeem** — one endpoint, once, within the TTL; the issuer verifies the commitment and pays out.
-5. **Reclaim** — after expiry, the unused locked amount returns to the Broker's shielded balance.
-
-Commitment hashing (`broker/src/commitmentHash.ts`) is verified **byte-identical** to the deployed `OxaCredentialIssuer` contract's own `compute_credential_commitment` (`contracts/oxa_credential_issuer/src/lib.cairo:48-50`), which uses `poseidon_hash_span([OXA_CREDENTIAL_TAG, secret, endpoint_id])`.
-
-## STRK20 Integration Depth
-
-OXA is grounded in the real STRK20 protocol, not an abstraction. Each of these integration points is exercised against live Sepolia state (see also [docs/decisions/0006-proving-service-blocked.md](docs/decisions/0006-proving-service-blocked.md) and [docs/deployments.md](docs/deployments.md)).
-
-### Real STRK20 pool integration
-
-- **Shielded pool usage.** Funds are shielded into the real STRK20 pool (`PRIVACY_POOL_ADDRESS=0x0254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91` in `broker/.env`). The wallet-shield transaction (`0x01d6b658…9996b`, recorded in `strk20.json`) creates the encrypted note that the Broker later discovers and consumes via mint.
-- **Mandatory deposit screening.** Per [strk20-by-example.org/build](https://strk20-by-example.org/build), STRK20 enforces deposit screening on every pool deposit — a deposit whose screening call fails reverts. Self-hosting the proving service is **not** a route around screening; it is a real, enforced on-chain gate. OXA's Broker registers with the pool bound to a policy-scoped viewing key (Decision 0001) and only mints credentials for deposits that passed screening.
-- **Viewing-key registration.** The Broker's viewing key (generated by `scripts/generate-canonical-viewing-key.mjs`, gated to `key < HALF_ORDER`) is registered on-chain so the Broker can discover its notes. This constraint — the pool requires canonical keys — is enforced in the pool's own `utils.cairo` and was discovered live during integration.
-- **Private transfers.** Mint and Reclaim execute via the pool's `privacy_invoke` using `@starkware-libs/starknet-privacy-sdk`'s `createPrivateTransfers` builder (Decision 0001), which drives genuine ZK proof generation and private note spend/creation.
-- **Self-hosted proving service.** The Broker's `PROVING_SERVICE_URL` points at a self-hosted `starknet_transaction_prover` (built from `starkware-libs/sequencer`'s `crates/starknet_transaction_prover`, pinned via `.github/workflows/build-prover.yml`).
-
-### Two real bugs found & fixed during integration
-
-1. **Prover Virtual-OS program hash mismatch.** The CI pin had drifted to a `main`-branch sequencer commit (`570ca41d`), which builds a prover emitting Virtual OS hash `0x1c7be322…` — **rejected on-chain** by Sepolia 0.14.3, which allowlists only `0x53f6c9fc…`. Fixed by pinning to the tagged `APOLLO-0.14.3-RC.17` commit (allowlist-confirmed), documented in `build-prover.yml`.
-2. **OxaCredentialIssuer missing `approve()` in the Reclaim branch.** The Reclaim operation returned funds to the Broker via the pool's `OpenNoteDeposit` but never called `approve(privacy_contract, amount)` on the underlying ERC-20 first — the pool's withdrawal then reverted. Found via a real on-chain revert (`TRANSFER_FAILED`), fixed in `contracts/oxa_credential_issuer/src/lib.cairo` (Reclaim branch now calls `IERC20.approve(spender: self.privacy_contract, amount)` before emitting the `OpenNoteDeposit`), and redeployed.
-
-### Authority separation (Decision 0001)
-
-The Owner, Broker, and Endpoint are three distinct Starknet accounts ([docs/deployments.md](docs/deployments.md)): Owner (`0x015717f8…ade62` — configured policies), Broker (`0x0022ee30…812a` — funds + mint/reclaim signer), Endpoint (`0x72a3ba87…7d07a5` — redeems credentials for payouts). The Broker holds its own account and a policy-scoped viewing key; the Owner's main wallet, main viewing key, and main balance are never touched by the Broker.
+| Operation | Sepolia | Mainnet |
+|---|---|---|
+| Register (viewing key) | ✅ | ✅ |
+| Shield | ✅ | ✅ |
+| Private send | ✅ | ✅ |
+| Mint | ✅ | ❌ blocked — see [Known Limitations](#known-limitations) |
+| Redeem | ✅ | ❌ not run |
+| Reclaim | ✅ | ❌ not run |
 
 ## Architecture
 
-### Credential lifecycle (sequence)
+| Component | Path | Role |
+|---|---|---|
+| Cairo contracts | `contracts/` | `OxaPolicyRegistry` (per-owner spend policies, endpoint allowlists) and `OxaCredentialIssuer` (credential storage; Mint/Reclaim via `privacy_invoke`, standalone `redeem`). Scarb workspace, Cairo `2024_07`, `starknet` 2.17.0, `privacy` package pinned at `b59d8a14…`. |
+| Broker | `broker/` | Express service (port 3000). Checks policy off-chain, mints by driving the STRK20 SDK (proof → broadcast), persists credential secrets to gitignored `broker/.data/`, reclaims expired credentials. |
+| TypeScript SDK | `sdk/` | `@oxa/sdk`: `HttpOxaBroker` (broker HTTP client) and `StarknetEndpointClient` (on-chain `redeem()` for endpoints). |
+| STRK20 SDK (vendored) | `vendor/starknet-privacy/sdk` | `@starkware-libs/starknet-privacy-sdk` 0.14.3-rc.5 (ESM-only, `file:` dependency). Computes STARK proofs and returns `{ call, proof }`; never broadcasts — the broker signs and submits the proof-carrying v3 transaction. |
+| Prover | external | Self-hosted STRK20 proving service (`PROVING_SERVICE_URL`), built from `starkware-libs/sequencer` `crates/starknet_transaction_prover`, pinned to tag `APOLLO-0.14.3-RC.17` (`.github/workflows/build-prover.yml`). Required for every pool operation. |
+| MCP server | `broker/scripts/mcp-server.mjs` | Streamable HTTP JSON-RPC at `POST /mcp` (port 3002). Tools: `oxa_request_credential`, `oxa_call_endpoint`, `oxa_reclaim_expired`. |
+| Inference relay | `broker/scripts/inference-relay.mjs` | Paid-endpoint example (port 3001). Serves `POST /infer` (Open-Meteo) only after independently verifying the credential was genuinely redeemed on-chain; otherwise 402. |
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Owner
-    participant Registry as OxaPolicyRegistry
-    participant Broker
-    participant Pool as STRK20 Pool
-    participant Endpoint
+Trust boundaries: the broker is a lightweight custodian (Decision 0001) holding its own Starknet account and a policy-scoped viewing key; it never touches the owner's wallet or main balance. The issuer accepts `privacy_invoke` only from the pool (`CALLER_NOT_PRIVACY`); the registry accepts spend records only from its configured `authorized_issuer`. Details in [Security](#security--trust-model).
 
-    Owner->>Registry: set_category_policy(owner, category, cap, ttl)
-    Owner->>Registry: set_endpoint_allowed(owner, category, endpoint_id)
-    Broker->>Pool: register (viewing key, screening)
-    Owner->>Broker: shield funds (private transfer into pool)
-    Note over Broker,Pool: discoverNotes() finds the 46e18 note
-    Broker->>Pool: mint(commitment, amount, expiry) [private transfer out]
-    Broker-->>Endpoint: credentialSecret + endpointId (off-chain)
-    Endpoint->>Broker: request payload
-    Broker->>Pool: redeem(credentialSecret, endpointId, payout)
-    Note over Pool,Endpoint: pool releases fixed amount to endpoint
-    alt unused before expiry
-        Broker->>Pool: reclaim(commitment) after expiry
-```
+## Protocol Flow
 
-## Agent Integration (MCP)
+Actors: **Owner** (sets policy), **Broker** (issues credentials), **Endpoint** (redeems). Contracts: `OxaPolicyRegistry`, `OxaCredentialIssuer`, the external STRK20 privacy pool.
 
-The Broker exposes an MCP server (`broker/scripts/mcp-server.mjs`, Decision 0005) with three tools, served over Streamable HTTP (MCP spec 2025-11-25) at `/mcp`:
+1. **Register** — broker registers its viewing key with the pool (proof-carrying `apply_actions`), enabling note discovery for its shielded balance.
+2. **Shield** — funds are deposited into the pool (deposit screening is protocol-enforced); the viewing key reveals the broker's shielded notes.
+3. **Policy** — the owner configures `OxaPolicyRegistry` from its own account: `set_category_policy` (`per_request_cap`, `period_cap`, `period_seconds`, `max_ttl_seconds`, mode lock), `set_endpoint_allowed`, `set_authorized_issuer(issuer)`.
+4. **Mint** — `POST /request-credential`:
+   - Broker pre-checks the policy with read-only registry calls (`broker/src/policyCheck.ts`): endpoint allowlisted, amount ≤ `per_request_cap`, TTL window configured, mode resolution.
+   - `broker/src/mint.ts` builds a pool bundle: withdraw `amount` STRK to `OxaCredentialIssuer` + `InvokeExternal` → `privacy_invoke(Mint, …)`.
+   - The SDK computes the STARK proof; the broker broadcasts the v3 transaction and waits for `SUCCEEDED`.
+   - The issuer re-checks the policy on-chain (`ENDPOINT_NOT_ALLOWED`, `POLICY_CAP_EXCEEDED` via `record_spend`), then stores `CredentialEntry { token, amount, endpoint_id, expiry_timestamp, reclaim_commitment, used: false }`.
+   - Commitments: credential = `poseidon_hash_span(['OXA_CREDENTIAL_TAG:V1', secret, endpoint_id])`; reclaim = `poseidon_hash_span(['OXA_RECLAIM_TAG:V1', reclaim_secret])`. `broker/src/commitmentHash.ts` is byte-identical to the Cairo implementation. `expiry = now + policy.max_ttl_seconds`.
+   - Only after on-chain confirmation are the secrets written to `broker/.data/credentials.json` and the claim payload returned.
+5. **Redeem** — the endpoint calls `OxaCredentialIssuer.redeem(credential_secret, endpoint_id, payout_address)`. On-chain: commitment recomputed; `CREDENTIAL_NOT_FOUND` / `ALREADY_USED` / `EXPIRED` / `ENDPOINT_MISMATCH` checks; entry marked used; ERC-20 transfer to payout; `CredentialRedeemed` event. Single-use and endpoint binding are enforced by the contract, not the broker.
+6. **Reclaim** — after expiry, `POST /reclaim-expired` has the broker open an SDK "Open" note and call `privacy_invoke(Reclaim, …, reclaim_secret, note_id)`. The issuer verifies past expiry + reclaim secret (`NOT_YET_EXPIRED`, `INVALID_RECLAIM_SECRET`), marks used, approves the pool, and returns `OpenNoteDeposit { note_id, token, amount }`; the pool credits the broker's shielded balance with the locked amount.
 
-| Tool | Purpose |
-|------|---------|
-| `oxa_request_credential` | Requests a scoped, single-use credential from the Broker's `/request-credential` (policy-gated) |
-| `oxa_call_endpoint` | Performs the real on-chain redeem, then forwards the authenticated request to the inference relay (when `INFERENCE_RELAY_URL` is set) |
-| `oxa_reclaim_expired` | Reclaims an expired, unused credential into the Broker's shielded balance |
+## Repository Structure
 
-Register with Claude Code:
+| Path | Purpose |
+|---|---|
+| `contracts/oxa_policy_registry/` | Policy storage contract + snforge tests |
+| `contracts/oxa_credential_issuer/` | Credential issuer contract (`privacy_invoke` Mint/Reclaim, standalone `redeem`) |
+| `contracts/oxa_integration_tests/` | Cross-contract snforge tests (mock ERC-20, mocked pool caller) |
+| `broker/src/` | Broker service: `server.ts` (routes), `mint.ts`, `reclaim.ts`, `policyCheck.ts`, `poolTx.ts` (proof + broadcast), `commitmentHash.ts`, `credentialStore.ts`, `config.ts` |
+| `broker/scripts/` | Runners: `register-broker*.mjs`, `shield-strk*.mjs`, `run-mint.mjs`, `run-redeem.mjs`, `run-reclaim.mjs`, `mint-mainnet.mjs`, `check-notes*.mjs`, `mcp-server.mjs`, `inference-relay.mjs`, `preflight.mjs` |
+| `sdk/src/` | `HttpOxaBroker`, `StarknetEndpointClient`, shared types, issuer ABI |
+| `vendor/starknet-privacy/` | Vendored STRK20 SDK + protocol repo (gitignored; cloned at install) |
+| `docs/` | `deployments.md`, decision records, landing page (`index.html`) |
+| `strk20.json` | Verified on-chain transactions and deployed addresses |
+
+## Requirements
+
+- Node.js 24.x, npm (verified for all TS components)
+- Scarb — Cairo edition `2024_07`, `starknet` 2.17.0, `snforge_std` 0.63.0 (contracts)
+- Docker — only for building the prover image (`.github/workflows/build-prover.yml`)
+- A funded Starknet account (STRK for v3 fees) and a reachable STRK20 prover for any pool operation
+
+## Installation
 
 ```bash
+git clone https://github.com/phllp-tanstic/oxa-protocol.git
+cd oxa-protocol
+
+# 1. Vendored STRK20 SDK (gitignored — clone and build first; broker depends on it via file:)
+git clone https://github.com/starkware-libs/starknet-privacy vendor/starknet-privacy
+git -C vendor/starknet-privacy checkout b59d8a141e49a9d940fb14dfe935cbecb8202814
+cd vendor/starknet-privacy/sdk && npm install && npm run build && cd ../../..
+
+# 2. OXA SDK
+cd sdk && npm install && npm run build && cd ..
+
+# 3. Broker (depends on ../sdk and ../vendor/starknet-privacy/sdk via file:)
+cd broker && npm install && npm run build
+
+# 4. Configuration
+cp .env.example .env   # then fill in every variable — see below
+```
+
+## Configuration
+
+`broker/.env` (gitignored; template in [`broker/.env.example`](broker/.env.example)). `broker/src/config.ts` fails fast, listing every missing required variable.
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `RPC_URL` | Yes | Starknet RPC endpoint for all reads and signing |
+| `BROKER_ACCOUNT_ADDRESS` / `BROKER_PRIVATE_KEY` | Yes | Broker's signing account for pool transactions |
+| `OWNER_ADDRESS` | Yes | Owner identity whose on-chain policies are checked (distinct from the broker) |
+| `VIEWING_KEY` | Yes | Viewing key registered with the pool; reveals the broker's shielded notes. Generate: `node scripts/generate-canonical-viewing-key.mjs` (enforces the pool's canonical-key `HALF_ORDER` bound) |
+| `PRIVACY_POOL_ADDRESS` | Yes | STRK20 privacy pool contract |
+| `POLICY_REGISTRY_ADDRESS` | Yes | `OxaPolicyRegistry` |
+| `CREDENTIAL_ISSUER_ADDRESS` | Yes | `OxaCredentialIssuer` |
+| `PORT` | Yes | Broker HTTP port (3000) |
+| `STARKNET_CHAIN_ID` | No | `SN_SEPOLIA` (default) or `SN_MAIN` — selects the proving-provider chain |
+| `PROVING_SERVICE_URL` | For pool ops | Self-hosted STRK20 prover (register/shield/mint/redeem/reclaim) |
+| `INDEXER_URL` | No | Note indexer; empty ⇒ `ContractDiscoveryProvider` (pool RPC reads) |
+| `ENDPOINT_ACCOUNT_ADDRESS` / `ENDPOINT_PRIVATE_KEY` / `ENDPOINT_PAYOUT_ADDRESS` | For MCP `oxa_call_endpoint` | Endpoint signing account and default payout address |
+| `BROKER_BASE_URL` | No | Broker URL for the MCP server (default `http://localhost:3000`) |
+| `INFERENCE_RELAY_URL` | No | When set, MCP forwards verified redemptions to the relay |
+| `RELAY_PORT` / `MCP_PORT` | No | Inference relay / MCP listen ports (3001 / 3002) |
+| `ALLOWED_ORIGIN` | No | CORS origin for broker + MCP (default: the GitHub Pages origin) |
+| `ALLOWED_ORIGINS` | No | Comma-separated Origin allowlist for the MCP server; unset ⇒ all origins accepted with a warning |
+| `OWNER_PRIVATE_KEY` | No | Reserved; not read by current code |
+
+## Running
+
+All service commands run from `broker/`. Sepolia flows read `broker/.env`; mainnet runners take config as runtime env vars and never touch `broker/.env`.
+
+```bash
+# Contracts — build + offline tests
+cd contracts && scarb build && snforge test
+
+# Broker HTTP API (port 3000): POST /request-credential, POST /reclaim-expired
+cd broker && npm start          # or: npm run dev (ts-node, no build)
+
+# MCP server (port 3002, Streamable HTTP at POST /mcp)
+npm run mcp
 claude mcp add --transport http oxa http://localhost:3002/mcp
+
+# Inference relay (port 3001) — requires `npm run build` first
+node scripts/inference-relay.mjs
 ```
 
-**Tool input schemas (quoted from `mcp-server.mjs`):**
-
-`oxa_request_credential`:
-```
-inputSchema:
-  type: object
-  properties:
-    category:       { type: string, description: "Spend category (e.g. inference)" }
-    endpointId:     { type: string, description: "Endpoint the credential is bound to" }
-    amount:         { type: string, description: "Amount in raw token units (decimal string)" }
-    modeOverride:   { type: string, enum: ["private", "public"] }
-  required: [category, endpointId, amount]
-```
-
-`oxa_call_endpoint`:
-```
-inputSchema:
-  type: object
-  properties:
-    claimPayload:
-      type: object
-      properties:
-        credentialSecret: { type: string }
-        endpointId:       { type: string }
-        payoutAddress:    { type: string }
-      required: [credentialSecret, endpointId]
-    request:
-      type: object
-      description: "Arbitrary request payload forwarded to the inference relay"
-  required: [claimPayload]
-```
-
-`oxa_reclaim_expired`:
-```
-inputSchema:
-  type: object
-  properties:
-    commitmentHash: { type: string, description: "Commitment hash of the expired, unused credential to reclaim" }
-  required: [commitmentHash]
-```
-
-The `oxa_call_endpoint` tool calls the Broker's standalone `redeem()` on-chain — verified against the real `OxaCredentialIssuer` ABI — before forwarding to the self-operated relay. The relay re-verifies the credential (see below).
-
-## Inference Relay
-
-`broker/scripts/inference-relay.mjs` wraps a real upstream service (Open-Meteo forecast API, no key needed) and serves `POST /infer` **only** to callers who have already paid on-chain. It does **not** trust the caller's claim: the credential's commitment is recomputed locally and its on-chain state is read directly from `OxaCredentialIssuer.get_credential` plus the `CredentialRedeemed` event — a replayed, never-redeemed, or only-reclaimed credential is rejected with `402 Payment Required`.
-
-```
-POST /infer  { claim_payload: { credentialSecret, endpointId, payoutAddress? }, request: { latitude?, longitude?, ... } }
-  200 → upstream JSON + verified commitment + redeemed=true
-  400 → malformed claim (missing credentialSecret / endpointId)
-  402 → credential not genuinely redeemed on-chain
-  502 → upstream failure
-```
-
-Run: `node scripts/inference-relay.mjs` (port via `RELAY_PORT`, default 3001).
-
-## Setup
-
-### Quick Start (hosted demo)
-
-The hosted landing page and MCP endpoint are in progress (Phase 3). Local testing is fully supported — see Self-Hosting below.
-
-### Self-Hosting
+Pool-operation scripts (require `PROVING_SERVICE_URL` and a funded account; proofs take minutes):
 
 ```bash
-# SDK (builds dist/ + copies src/abi to dist/abi)
-cd sdk
-npm install
-npm run build
-
-# Broker (builds, runs server on :3000)
-cd ../broker
-npm install
-npm run build
-npm start     # node dist/server.js
-
-# Inference relay (in another terminal)
-node scripts/inference-relay.mjs   # :3001
-
-# MCP server (in another terminal)
-npm run mcp    # :3002, Streamable HTTP at /mcp
+cd broker
+node scripts/preflight.mjs                        # read-only: env, nonce, STRK balance, prover reachability
+node scripts/register-broker.mjs                  # Sepolia register
+node scripts/approve-pool.mjs                     # ERC-20 approve prerequisite for shield
+node scripts/shield-strk.mjs                      # Sepolia shield
+node scripts/check-notes.mjs                      # discover the broker's shielded notes
+node --loader ts-node/esm scripts/run-mint.mjs    # Sepolia mint via mintCredential()
+node --loader ts-node/esm scripts/run-redeem.mjs  # redeem from .data/credentials.json
+node --loader ts-node/esm scripts/run-reclaim.mjs # reclaim via HttpOxaBroker.reclaimExpired
 ```
 
-Configure via `broker/.env` (copy from `broker/.env.example`). Key variables:
+Mainnet twins (same arguments; pass mainnet env vars inline, e.g. `STARKNET_CHAIN_ID=SN_MAIN`):
 
-| Variable | Purpose |
-|----------|---------|
-| `RPC_URL` | Starknet Sepolia RPC (REQUIRED) |
-| `BROKER_ACCOUNT_ADDRESS` / `BROKER_PRIVATE_KEY` | Broker account (REQUIRED) |
-| `OWNER_ADDRESS` / `OWNER_PRIVATE_KEY` | Owner account (REQUIRED) |
-| `ENDPOINT_ACCOUNT_ADDRESS` / `ENDPOINT_PRIVATE_KEY` | Endpoint account (REQUIRED for MCP `oxa_call_endpoint`) |
-| `PRIVACY_POOL_ADDRESS` | STRK20 pool: `0x0254a6b2…` |
-| `POLICY_REGISTRY_ADDRESS` | `0x039cc9515534d60c…` |
-| `CREDENTIAL_ISSUER_ADDRESS` | `0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650` |
-| `VIEWING_KEY` | Broker's canonical viewing key |
-| `PROVING_SERVICE_URL` | Self-hosted prover (REQUIRED — see `build-prover.yml`) |
-| `BROKER_BASE_URL` / `INFERENCE_RELAY_URL` | Service wiring (OPTIONAL) |
-| `PORT` / `RELAY_PORT` / `MCP_PORT` | Listen ports (default 3000 / 3001 / 3002) |
+```bash
+node scripts/register-broker-mainnet.mjs
+node scripts/shield-strk-mainnet.mjs
+node scripts/check-notes-mainnet.mjs
+node --loader ts-node/esm scripts/mint-mainnet.mjs   # BLOCKED — see Known Limitations
+```
 
-## Verified Evidence
+## SDK / API Usage
 
-All transactions and contracts below are on Starknet **Sepolia** testnet, confirmed against RPC and Voyager:
+```ts
+import { HttpOxaBroker, StarknetEndpointClient } from "@oxa/sdk";
 
-| Type | Hash | Voyager |
-|------|------|---------|
-| register | `0x3586720c6a26c3092afe166d386326a7cea23551939617a4053fee0ac01f01a` | [tx](https://sepolia.voyager.online/tx/0x3586720c6a26c3092afe166d386326a7cea23551939617a4053fee0ac01f01a) |
-| declare | `0x2274ed95e3518794554d1464e1e9c05608cda1823e9c4f66b766f6db94e03b` | [tx](https://sepolia.voyager.online/tx/0x2274ed95e3518794554d1464e1e9c05608cda1823e9c4f66b766f6db94e03b) |
-| deploy | `0x045a7e792b3bf30d77e293f29def79ee6d88d93fbceed665d1a52a97aa145d5a` | [tx](https://sepolia.voyager.online/tx/0x045a7e792b3bf30d77e293f29def79ee6d88d93fbceed665d1a52a97aa145d5a) |
-| shield | `0x01d6b658fb5cdfcb1400f716d24ee69bc2fc595c1e2f970043c317843cb9996b` | [tx](https://sepolia.voyager.online/tx/0x01d6b658fb5cdfcb1400f716d24ee69bc2fc595c1e2f970043c317843cb9996b) |
-| mint | `0x4d41aaa4f7df5a84ad73a6f9b030a0b71402fbe16ce333791ebbbf9c95215ae` | [tx](https://sepolia.voyager.online/tx/0x4d41aaa4f7df5a84ad73a6f9b030a0b71402fbe16ce333791ebbbf9c95215ae) |
-| redeem | `0x2839990c2eacc1fedca3211933e061b81c09856e6d7d7682131f6282203aba7` | [tx](https://sepolia.voyager.online/tx/0x2839990c2eacc1fedca3211933e061b81c09856e6d7d7682131f6282203aba7) |
-| reclaim | `0x827deafd952c36b93ad5f2385d6a8a9610c6b3b5ccb15d3e322aae55223ae8` | [tx](https://sepolia.voyager.online/tx/0x827deafd952c36b93ad5f2385d6a8a9610c6b3b5ccb15d3e322aae55223ae8) |
+// Agent side: request a scoped credential from the broker.
+const broker = new HttpOxaBroker({ baseUrl: "http://localhost:3000" });
+const credential = await broker.requestCredential({
+  category: "inference",          // spend category from the owner's policy
+  endpointId: "weather_relay",    // credential is bound to this endpoint ID
+  amount: 500000000000000000n,    // raw u128 token units
+  // modeOverride: "private",     // optional; a mode-locked category may forbid it
+});
+// credential: { credentialSecret, endpointId, issuerContract, token, amount, expiryTimestamp, mode }
 
-**Transactions (MAINNET):**
+// Endpoint side: redeem on-chain, once, before expiry.
+const endpoint = new StarknetEndpointClient({
+  rpcUrl: process.env.RPC_URL,
+  issuerContract: "0x…",          // OxaCredentialIssuer address
+  accountAddress: "0x…",          // endpoint's Starknet account
+  privateKey: "0x…",
+});
+const { txHash, amount } = await endpoint.redeemCredential({
+  credentialSecret: credential.credentialSecret,
+  endpointId: credential.endpointId,
+  payoutAddress: "0x…",
+});
+```
 
-| Type | Hash | Voyager | Notes |
-|------|------|---------|-------|
-| register | `0x6fd04c6c9909cc639529c45d9796a0302194481c1f80ca46d3ba6bf7f60b9c2` | [tx](https://voyager.online/tx/0x6fd04c6c9909cc639529c45d9796a0302194481c1f80ca46d3ba6bf7f60b9c2) | Real call against the STRK20 pool. SUCCEEDED at block 14399936. |
-| approve | `0x14ca98dea594cc3e918f60863f4113d95229d8b0d02e59d93c4873e63c34658` | [tx](https://voyager.online/tx/0x14ca98dea594cc3e918f60863f4113d95229d8b0d02e59d93c4873e63c34658) | ERC20 approve (5 STRK), prerequisite only — not a direct pool call. SUCCEEDED at block 14388155. |
-| approve | `0x4e8727effe7ccec893dc9e6dbf22b3017528bac8e9dc39d40725b3167abb41f` | [tx](https://voyager.online/tx/0x4e8727effe7ccec893dc9e6dbf22b3017528bac8e9dc39d40725b3167abb41f) | ERC20 approve (20 STRK), prerequisite only — not a direct pool call. SUCCEEDED at block 14399480. |
+Broker HTTP API (what `HttpOxaBroker` calls): `POST /request-credential` `{ category, endpointId, amount, modeOverride? }` → `Credential` JSON; `400` policy rejection; `501` public mode (not implemented); `502` mint failure. `POST /reclaim-expired` `{ commitmentHash }` → `{ txHash }`.
 
-**Contracts (Sepolia):**
+## Contracts
 
-| Name | Address | Voyager |
-|------|---------|---------|
-| OxaPolicyRegistry | `0x039cc9515534d60c65e955139a4c092e66e3fd9fe788714f3afa730352c9c4a0` | [contract](https://sepolia.voyager.online/contract/0x039cc9515534d60c65e955139a4c092e66e3fd9fe788714f3afa730352c9c4a0) |
-| OxaCredentialIssuer | `0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650` | [contract](https://sepolia.voyager.online/contract/0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650) |
+Build and test from `contracts/` (Scarb workspace): `scarb build` (artifacts in `target/dev/`), `snforge test`.
 
-**Contracts (MAINNET):**
+Deployments were performed with the Starknet CLI (`sncast`); constructor args and post-deploy configuration are recorded in [`docs/deployments.md`](docs/deployments.md). Post-deploy, the owner sets `set_authorized_issuer(issuer)`, `set_category_policy`, `set_endpoint_allowed` — the issuer cannot call `record_spend` before `set_authorized_issuer`.
 
-| Name | Address | Voyager | Notes |
-|------|---------|---------|-------|
-| STRK20 Privacy Pool (external) | `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a` | [contract](https://voyager.online/contract/0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a) | External STRK20 protocol contract — not OXA-deployed. The register mainnet tx calls this pool. |
+**Sepolia** (current — matches `broker/.env` and [`strk20.json`](strk20.json)):
 
-## Known Limitations & Roadmap
+- `docs/deployments.md` predates the current Sepolia issuer deployment and all mainnet activity — [`strk20.json`](strk20.json) is the authoritative address/tx record.
 
-- **Mainnet registration proven working.** The full registration flow (proof computation + on-chain registration) is now verified on Starknet mainnet against the live STRK20 pool. A real `register` call succeeded at block 14399936 — see [Verified Evidence](#verified-evidence) below. This was achieved with a self-hosted prover pointed at a verified-complete Alchemy mainnet RPC endpoint (Lava's mainnet RPC omits `state_diff_commitment` on historical block-by-number queries, which breaks proof computation; Alchemy returns the complete data).
-- **One of three required pool-touching mainnet transactions so far.** The hackathon requires three mainnet transactions that each prove a real call against the STRK20 pool. Currently only `register` directly touches the pool; shield and the remaining pool interactions are still needed for full eligibility. (Two ERC20 approve transactions are also recorded for transparency, but they are prerequisite allowances, not direct pool calls.)
-- **Public MCP hosting (Phase 3):** the MCP endpoint is locally testable; a public URL will be linked from the landing page once hosted.
+## Roadmap
 
-## Security Notes
+- **Resolve mainnet Mint `INVALID_SIGNATURE`** — root cause not yet identified; the signed `__execute__` step reverts even though the unsigned `compile_actions` view of the same action bundle succeeds. Next step: isolate whether this is broker-side (signing/serialization) or a pool/SDK-side issue, potentially in coordination with the STRK20 SDK maintainers.
+- **Open a self-channel for the mainnet deployer** — unblocks partial-amount mints (currently full-note-only due to `SUBCHANNEL_NOT_FOUND` on any surplus).
+- **Run mainnet Redeem and Reclaim** — once Mint is unblocked, complete and verify the full mainnet lifecycle to match Sepolia.
+- **Public-mode settlement** — implement the direct-withdraw path currently stubbed as `501 Not Implemented`.
+- **Indexer service** — replace `ContractDiscoveryProvider`'s pool RPC reads with the parked indexer build (Decision 0006) for faster note discovery.
+- **`docs/deployments.md` refresh** — bring it in line with the current Sepolia issuer and all mainnet deployments; `strk20.json` remains authoritative in the meantime.
 
-- **Authority separation** (Decision 0001): Owner, Broker, and Endpoint are three distinct Starknet accounts. The Broker is a lightweight custodian for the credential-issuance flow only; the Owner's main wallet and balance are never touched by the Broker.
-- **Deposit screening is protocol-enforced, not optional.** STRK20 rejects unscreened pool deposits on-chain (via `strk20-by-example.org/build`); self-hosting the prover does not bypass this.
-- **Secret hygiene.** All sensitive values live in `broker/.env` (gitignored). `broker/.env.example` contains no real values.
+## References
+| Contract | Address |
+|---|---|
+| `OxaPolicyRegistry` | `0x039cc9515534d60c65e955139a4c092e66e3fd9fe788714f3afa730352c9c4a0` |
+| `OxaCredentialIssuer` | `0x000370dd3087f8a474c1dac40636a02bef1c330a3905977fcf42962741fc4650` |
+| STRK20 privacy pool (external) | `0x0254a6b2997ef52e9f830ce1f543f6b29768295e8d17e2267d672c552cfe0d91` |
+| STRK token | `0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d` |
+
+**Mainnet**:
+
+| Contract | Address | Notes |
+|---|---|---|
+| STRK20 privacy pool (external) | `0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a` | Not OXA-deployed; register/shield/private-send call it |
+| `OxaCredentialIssuer` | `0x04cffa828f59b34c98a124b05ef7874b206249635eaf4512417efee6fcf44c22` | Referenced by `broker/scripts/mint-mainnet.mjs`; on-chain `get_authorized_issuer` points here |
+
+Full transaction history with hashes and verification notes: [`strk20.json`](strk20.json).
+
+## Testing
+
+| Command | What it exercises | Needs |
+|---|---|---|
+| `cd contracts && snforge test` | Registry policy/caps/authorization; issuer Mint/Redeem/Reclaim, error paths, commitment domain separation (pool caller mocked via `start_cheat_caller_address`) | Nothing — offline |
+| `node scripts/preflight.mjs` | Env presence, account class, STRK balance, prover connectivity | Live RPC |
+| `node scripts/check-notes.mjs` | Note discovery for the broker's viewing key | Live RPC, registered viewing key |
+| `npx ts-node --transpile-only scripts/smoke-mint.ts` | Policy check + mint wiring up to the pool-write boundary | Live RPC; prover for the mint step |
+| `node --loader ts-node/esm scripts/run-mint.mjs` | Full mint: proof, broadcast, issuer state | Live RPC, funded account, shielded note, prover |
+| `node --loader ts-node/esm scripts/run-redeem.mjs` | Signed `redeem()` against the deployed issuer | Live RPC, funded account, minted credential in `.data/` |
+| `node --loader ts-node/esm scripts/run-reclaim.mjs` | Full reclaim via the broker HTTP API | Broker running, expired credential in `.data/`, prover |
+
+No TypeScript unit-test runner is configured; `sdk` and `broker` expose `typecheck`/`build` scripts only. The vendored SDK carries its own vitest suite.
+
+## Security / Trust Model
+
+- **Three distinct accounts** (Decision 0001): the owner sets policy, the broker signs pool transactions, the endpoint redeems. The broker is a custodian only for credential issuance; the owner's wallet, main viewing key, and balance are never touched by it.
+- **Policy enforcement is two-layered.** The broker pre-checks the registry off-chain (read-only); the issuer independently re-checks on-chain during `privacy_invoke` (endpoint allowlist, per-request cap, rolling period cap via `record_spend`). Per Decision 0002's addendum, the on-chain recheck catches broker bugs but not a malicious broker lying about `owner`/`category` — the pool's unlinkability hides the real owner from the issuer, so broker compromise (T3) is mitigated only operationally, by keeping the broker's funded balance conservative.
+- **Fund control.** Pool movements require the broker's account signature and a valid STARK proof. The issuer moves credential funds only via pool-settled open notes (reclaim) or the single `redeem()` transfer.
+- **Credential secrecy.** Only commitments live on-chain. `credentialSecret`/`reclaimSecret` are random 128-bit values persisted to gitignored `broker/.data/credentials.json` after on-chain confirmation. Whoever holds `(credentialSecret, endpointId)` can redeem before expiry — custody of that pair governs the payout address chosen at redeem time.
+- **Replay protection.** Single-use is enforced on-chain (`ALREADY_USED` on both redeem and reclaim); expiry by `get_block_timestamp() > entry.expiry_timestamp`; endpoint binding by `ENDPOINT_MISMATCH`.
+- **Reclaim safety.** Requires the reclaim secret (Poseidon-verified against the stored commitment) and is impossible before expiry (`NOT_YET_EXPIRED`). The secret never leaves broker custody.
+- **Viewing key.** Grants read access to the broker's shielded notes only. The pool enforces canonical keys (`< HALF_ORDER`); the generator script enforces this.
+- **Deposit screening.** Protocol-enforced inside the pool's `privacy_invoke` path; self-hosting the prover does not bypass it. Credential issuance is additionally gated on discovering a valid screened note.
+- **MCP surface.** Origin-checked against `ALLOWED_ORIGINS` when set (DNS-rebinding defense); unset `ALLOWED_ORIGINS` warns and accepts all origins — not production-safe.
+
+## Known Limitations
+
+- **Mainnet Mint is blocked.** Two distinct, now-separated issues (full detail in the STATUS header of [`broker/scripts/mint-mainnet.mjs`](broker/scripts/mint-mainnet.mjs)): (1) the deployer had no self-channel on the mainnet pool, so any surplus > 0 emitted a `CreateEncNote` that reverted with `SUBCHANNEL_NOT_FOUND` — resolved by minting the full note value (zero surplus); (2) the subsequent signed `__execute__` still reverts with `INVALID_SIGNATURE`, root cause not fully resolved. Mainnet Mint, Redeem, and Reclaim are **not implemented**.
+- **No self-channel on mainnet** ⇒ no partial-amount mints; the workaround is full-note-only minting until the deployer opens a self-channel and registers a STRK subchannel on it.
+- **Public-mode settlement** (direct withdraw to the endpoint, bypassing the issuer) is not implemented — `POST /request-credential` returns `501` for categories resolving to public mode.
+- **The prover is an operational dependency.** Self-hosted, pinned to sequencer tag `APOLLO-0.14.3-RC.17` (0.14.4+ virtual-OS hashes are rejected on-chain); proving takes minutes on commodity hardware, hence the 5-minute SDK request timeout.
+- **Note discovery** uses `ContractDiscoveryProvider` (pool RPC reads); the indexer service build is parked (Decision 0006), so `INDEXER_URL` is normally empty.
+- **Mainnet RPC caveat:** some public endpoints (e.g. Lava) omit `state_diff_commitment` on historical block queries, breaking proof computation; a complete endpoint (e.g. Alchemy) is required.
+- `docs/deployments.md` predates the current Sepolia issuer deployment and all mainnet activity — [`strk20.json`](strk20.json) is the authoritative address/tx record.
+
+## References
+
+- [`strk20.json`](strk20.json) — every verified transaction and deployed address (Sepolia lifecycle + mainnet register/shield/private-send)
+- [`docs/deployments.md`](docs/deployments.md) — Sepolia deployment txs, constructor args, post-deploy config
+- Decision records: [0001 authority mechanism](docs/decisions/0001-authority-mechanism.md) · [0002 on-chain policy recheck](docs/decisions/0002-onchain-policy-recheck.md) · [0004 privacy package grounding](docs/decisions/0004-privacy-package-grounding.md) · [0005 MCP agent demo](docs/decisions/0005-mcp-agent-demo.md) · [0006 proving service](docs/decisions/0006-proving-service-blocked.md)
+- [`broker/.env.example`](broker/.env.example) — full configuration template
+- [`.github/workflows/build-prover.yml`](.github/workflows/build-prover.yml) — prover image build and sequencer pin rationale
+- Landing page: [`docs/index.html`](docs/index.html) (served at https://phllp-tanstic.github.io/oxa-protocol/)
 
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
-## Footnotes
-
-[^1]: "Self-hosting is not a route around screening" — the deposit-screening rule is enforced inside the pool's own `privacy_invoke` path; operators running their own proving service still must route deposits through screening. The OXA Broker's design makes a screening-failure impossible to ignore: credential issuance is gated on `discoverNotes()` returning a valid screened note.
-
-[^2]: The wallet-shield tx `0x01d6b658…9996b` was submitted by a relayer (the wallet is gasless), but it is **initiated by** and **authorized by the private key of** `0x013A9397…59276` (per the wallet's own tx history). The STRK20 `Transfer` event in that tx shows `from = 0x013A9397…59276`, confirming the wallet's funds sourced the deposit.
