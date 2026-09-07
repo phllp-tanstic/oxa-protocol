@@ -15,6 +15,8 @@ An owner shields funds into the privacy pool once. The broker then issues per-pu
 | Redeem | ✅ | ❌ not run |
 | Reclaim | ✅ | ❌ not run |
 
+OXA has **3 verified mainnet transactions** (Register, Shield, Private Send) against the live STRK20 pool — see the table above and `strk20.json` for hashes.
+
 ## Architecture
 
 | Component | Path | Role |
