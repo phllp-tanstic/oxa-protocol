@@ -31,6 +31,13 @@ export interface BrokerConfig {
   privacyPoolAddress: string;
   policyRegistryAddress: string;
   credentialIssuerAddress: string;
+  /**
+   * Starknet chain ID the SDK proving provider targets: 'SN_SEPOLIA' or
+   * 'SN_MAIN'. Sourced from STARKNET_CHAIN_ID; defaults to SN_SEPOLIA so every
+   * existing Sepolia flow behaves byte-identically. Mainnet runners
+   * (scripts/mint-mainnet.mjs) set STARKNET_CHAIN_ID=SN_MAIN at runtime.
+   */
+  chainId: 'SN_SEPOLIA' | 'SN_MAIN';
   port: number;
 }
 
@@ -50,7 +57,7 @@ const REQUIRED_STRING_VARS = [
 //   confirmed by the hackathon organizers yet; mint stays blocked meanwhile.
 // - INDEXER_URL: the discovery/indexer service build is parked (upstream git
 //   dependency unreachable from this machine); no route consumes it yet.
-const OPTIONAL_STRING_VARS = ['PROVING_SERVICE_URL', 'INDEXER_URL'] as const;
+const OPTIONAL_STRING_VARS = ['PROVING_SERVICE_URL', 'INDEXER_URL', 'STARKNET_CHAIN_ID'] as const;
 
 /**
  * Load and validate broker configuration from the environment.
@@ -86,6 +93,13 @@ export function loadConfig(): BrokerConfig {
     port = parsed;
   }
 
+  const chainIdRaw = values.STARKNET_CHAIN_ID || 'SN_SEPOLIA';
+  if (chainIdRaw !== 'SN_SEPOLIA' && chainIdRaw !== 'SN_MAIN') {
+    throw new Error(
+      `Invalid STARKNET_CHAIN_ID value: "${chainIdRaw}" — must be SN_SEPOLIA or SN_MAIN.`,
+    );
+  }
+
   if (missing.length > 0) {
     throw new Error(
       `Incomplete broker configuration — missing required environment variable(s): ${missing.join(', ')}. ` +
@@ -104,6 +118,7 @@ export function loadConfig(): BrokerConfig {
     privacyPoolAddress: values.PRIVACY_POOL_ADDRESS as string,
     policyRegistryAddress: values.POLICY_REGISTRY_ADDRESS as string,
     credentialIssuerAddress: values.CREDENTIAL_ISSUER_ADDRESS as string,
+    chainId: chainIdRaw as 'SN_SEPOLIA' | 'SN_MAIN',
     port: port as number,
   };
 }

@@ -63,7 +63,13 @@ export async function createPoolClient(): Promise<PoolClient> {
     },
     provingProvider: {
       url: config.provingServiceUrl,
-      chainId: constants.StarknetChainId.SN_SEPOLIA,
+      // Chain parameterized via STARKNET_CHAIN_ID (config.chainId): SN_SEPOLIA
+      // by default (all existing Sepolia flows unchanged), SN_MAIN for the
+      // mainnet mint runner (scripts/mint-mainnet.mjs).
+      chainId:
+        config.chainId === 'SN_MAIN'
+          ? constants.StarknetChainId.SN_MAIN
+          : constants.StarknetChainId.SN_SEPOLIA,
       requestTimeoutMs: 300000,
     },
     discoveryProvider,
