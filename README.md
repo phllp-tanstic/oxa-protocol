@@ -195,6 +195,7 @@ Deployments were performed with the Starknet CLI (`sncast`); constructor args an
 **Sepolia** (current — matches `broker/.env` and [`strk20.json`](strk20.json)):
 
 - `docs/deployments.md` predates the current Sepolia issuer deployment and all mainnet activity — [`strk20.json`](strk20.json) is the authoritative address/tx record.
+- **MCP endpoint is intentionally unauthenticated** — anyone can call `oxa_request_credential`, and every credential draws from the broker's own shielded balance, not the caller's. On-chain `per_request_cap`/`period_cap` bound exposure per request and per rolling window, but there's no caller authentication or rate limiting beyond that. Acceptable for demo purposes; would need addressing before any real-value production use.
 
 ## Roadmap
 
