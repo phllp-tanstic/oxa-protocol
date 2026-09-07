@@ -62,6 +62,20 @@
       "link": "https://voyager.online/tx/0x4e8727effe7ccec893dc9e6dbf22b3017528bac8e9dc39d40725b3167abb41f",
       "network": "mainnet",
       "note": "ERC20 approve (20 STRK) — prerequisite allowance for the pool, not a direct pool call. Verified: SUCCEEDED at block 14399480."
+    },
+    {
+      "type": "shield",
+      "hash": "0x05396b3327105a2113102f107dd527b25a618f18207e18c7643793bc9b6658fb",
+      "link": "https://voyager.online/tx/0x05396b3327105a2113102f107dd527b25a618f18207e18c7643793bc9b6658fb",
+      "network": "mainnet",
+      "note": "Real call against the STRK20 pool contract (0x040337b1af3c663e86e333bab5a4b28da8d4652a15a69beee2b677776ffe812a). Verified: SUCCEEDED, ACCEPTED_ON_L1 at block 14463698. Net 1.0 STRK shielded (gross 7 STRK transferred; ~6 STRK routed to prover as fee, visible on-chain in the transfer events)."
+    },
+    {
+      "type": "private_send",
+      "hash": "0x042c9177726bd97729c753482745398ec7f1ceb0cc08418ee2af0bac29b425db",
+      "link": "https://voyager.online/tx/0x042c9177726bd97729c753482745398ec7f1ceb0cc08418ee2af0bac29b425db",
+      "network": "mainnet",
+      "note": "Private send from shielded balance to the deployer account (0x0773d67893746d6a5a318429380d566cf01b19358ea9641ef6a1563f833ccc0e). Verified: SUCCEEDED, ACCEPTED_ON_L2 at block 14490287, touches STRK20 pool contract. Receipt independently confirmed via note discovery with the deployer's registered viewing key: 1 shielded note of 0.960804 STRK now held by the deployer."
     }
   ],
   "contracts": [
