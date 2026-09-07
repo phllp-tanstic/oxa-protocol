@@ -1,14 +1,21 @@
-// STATUS: attempted on mainnet 2026-09-07, reverted with INVALID_SIGNATURE inside
-// the pool's __execute__ (tx NOT broadcast —the prover rejected the simulated
-// revert before submission, so no funds were spent). Root cause not fully
-// resolved: register succeeds through the identical signing path
-// (ProofInvocationFactory.create), but withdraw+invoke (this script's action
-// bundle) does not —the fault appears to be in how the pool validates a
-// signature over a multi-action bundle referencing an existing note's witness
-// state, not an account/key identity mismatch (register's success rules that
-// out — same account, same signer, same code path). Left here as a documented,
-// honest attempt; not currently working. See git history / session notes for
-// full investigation trail.
+// STATUS: BLOCKED — not a signature bug. Root cause found 2026-09-07 via
+// unsigned compile_actions view calls (read-only, no signature, no broadcast):
+//
+//   The deployer has NO self-channel on the mainnet pool. The one channel they
+//   have is an INCOMING channel (sender ≠ deployer). The compiler emits a
+//   CreateEncNote action whenever there's surplus (balance > 0n, compiler.ts:738),
+//   and CreateEncNote requires a subchannel on a SELF-channel — which doesn't
+//   exist. The pool reverts with SUBCHANNEL_NOT_FOUND before any signature check.
+//
+//   Confirmed: compile_actions view SUCCEEDS with zero surplus (full-note withdraw,
+//   no CreateEncNote) and FAILS with any surplus > 0 (CreateEncNote → SUBCHANNEL_NOT_FOUND).
+//
+// WORKAROUND: mint the FULL note value (960804000000000000n = 0.960804 STRK).
+// This produces zero surplus, so no CreateEncNote is emitted, and the pool
+// accepts the bundle. per_request_cap for 'inference' is 1 STRK — 0.960804 fits.
+//
+// To mint partial amounts later, the deployer must first open a self-channel
+// and register a STRK subchannel on it. Until then, this script is full-note-only.
 // Mainnet twin of scripts/run-mint.mjs — one-off runner: mintCredential() from
 // src/mint.ts, executed directly with the same loader mechanism the dev script
 // uses ("dev": "node --loader ts-node/esm src/server.ts") — no build step:
@@ -93,7 +100,12 @@ if (process.env.PROVING_SERVICE_URL.trim() !== "http://35.255.82.183:3010") {
     "WARNING: PROVING_SERVICE_URL differs from tonight's http://35.255.82.183:3010 — continuing, but verify this is intentional."
   );
 }
-// AMOUNT — user-confirmed: 0.5 STRK, raw u128.
+// AMOUNT — FULL note value: 0.960804 STRK, raw u128.
+//
+// FULL-NOTE-ONLY CONSTRAINT (see STATUS header): the deployer has no self-channel,
+// so any surplus > 0 triggers CreateEncNote → SUBCHANNEL_NOT_FOUND. Minting the
+// full note value produces zero surplus, bypassing the issue. To mint partial
+// amounts later, open a self-channel + STRK subchannel first.
 //
 // Cost model (measured, not guessed — proven Sepolia mint tx 0x4d41aaa4... plus
 // tonight's mainnet shield receipt and live pool getters):
@@ -107,7 +119,11 @@ if (process.env.PROVING_SERVICE_URL.trim() !== "http://35.255.82.183:3010") {
 //   - Deployer transparent balance: 27.64 STRK — comfortably sufficient.
 //     Re-read get_fee_amount() right before running: the protocol can change
 //     it via set_fee_amount.
-const AMOUNT = 500000000000000000n; // 0.5 STRK, raw u128 — user-confirmed amount
+const AMOUNT = 960804000000000000n; // FULL note value — 0.960804 STRK, raw u128.
+// Using the full note avoids CreateEncNote (surplus routing), which requires a
+// self-channel the deployer doesn't have (confirmed via unsigned compile_actions
+// view: SUBCHANNEL_NOT_FOUND with any surplus > 0; SUCCEEDED with zero surplus).
+// per_request_cap for 'inference' is 1 STRK — 0.960804 STRK fits under it.
 if (typeof AMOUNT !== "bigint" || AMOUNT <= 0n) {
   console.error(
     "AMOUNT is invalid (see the AMOUNT comment in scripts/mint-mainnet.mjs)."
@@ -122,7 +138,7 @@ if (typeof AMOUNT !== "bigint" || AMOUNT <= 0n) {
 const params = {
   category: "inference",       // was "test_mvl" — the real, pre-configured production category
   endpointId: "weather_relay", // was "endpoint_1"
-  amount: AMOUNT,               // unchanged: 500000000000000000n (0.5 STRK) — fits comfortably under the 1 STRK per_request_cap
+  amount: AMOUNT,               // FULL note: 960804000000000000n (0.960804 STRK) — fits under the 1 STRK per_request_cap
   maxTtlSeconds: 3600n,          // was 600n — matches on-chain max_ttl_seconds=3600 for "inference", not the test_mvl value
   ownerAddress: DEPLOYER,
 };
